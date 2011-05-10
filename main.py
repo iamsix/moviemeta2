@@ -96,7 +96,7 @@ class MainProgram:
 
     def savesettings(self, **kwargs):
         self.config.set("general", "Directories", ",".join(kwargs["mdirectory"]))
-        print self.config.get("general","Directories")
+        self.config.write(open("main.conf", "w"))
     savesettings.exposed = True
         
     def validatedirectory(self, dir):
@@ -105,7 +105,7 @@ class MainProgram:
             response.status = 200
         else:
             response.status = 404
-        return "this"
+        return ""
     validatedirectory.exposed = True
     
     def movie(self, movieid, filename=None):
