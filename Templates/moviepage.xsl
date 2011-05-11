@@ -8,44 +8,15 @@
         <title>Movie &lt;meta&gt;</title>
       </head>
 
-      <script type="text/javascript">
-        function searchsuggestion(input)
-        {
-        div = document.getElementById("searchsuggestions");
-        searchstring = input.value;
-        req = new XMLHttpRequest();
-        req.open("POST","/searchsuggestions",true);
-        req.setRequestHeader("Content-type","application/x-www-form-urlencoded ");
-        req.send("search=" + searchstring);
-
-        req.onreadystatechange=function()
-        {
-        if (req.readyState==4)
-        {
-        if (req.status==200)
-        {
-        div.innerHTML = req.responseText;
-        div.style.visibility = "visible";
-        }
-        }
-
-        }
-        }
-
-        function hideSuggestions()
-        {
-        setTimeout('document.getElementById("searchsuggestions").style.visibility = "hidden"', 250)
-        }
-
-      </script>
+	  <script type="text/javascript" src="/Scripts/searchsuggestions.js"></script>
       
       
       <style type="text/css">
         a.header{color: #DDD; font-weight: bold; }
         a{color: #4e5785;}
-        a.movieXMLcomplete{color: green; padding-bottom: 5px;}
-        a.movieXMLnone{color: red; padding-bottom: 5px;}
-        a.movieXMLincomplete{color: #4f61c5; padding-bottom: 5px;}
+        a.movieXMLcomplete{color: green;}
+        a.movieXMLnone{color: red;}
+        a.movieXMLincomplete{color: #4f61c5;}
         #searchbox{padding: 3px 25px 4px 10px; background:transparent url('/Images/searchbox.png') 0 -24px no-repeat; width: 280px;}
         td.castpic{padding: 2px 5px 2px 5px}
         td.person{padding: 5px 60px 0px 30px}
@@ -57,7 +28,7 @@
             <div style="float: right; margin-right: 15px; margin-top: 15px; height: 20px; ">
               <form action="/search" method="get">
                 <span id="searchbox">
-                  <input type="text" onblur='hideSuggestions()' onkeyup="searchsuggestion(this)" placeholder="Search" name="search" style="background: transparent; border: none;font-weight: bold; color: #555; width: 225px;"/>
+                  <input type="text" onblur='hideSuggestions()' onkeypress="return keypress(event.keyCode)" onkeyup="searchsuggestion(this, event.keyCode)" placeholder="Search" name="search" style="background: transparent; border: none;font-weight: bold; color: #555; width: 225px;"/>
                 </span>
                 <br />
                 <div id="searchsuggestions"></div>
@@ -74,7 +45,7 @@
                 <a class="header" style="padding-right: 15px; padding-left: 15px;">Cats</a>
               </span>
               <span style="float: right;padding-right: 15px;">
-                <a class="header" style="padding-right: 15px; padding-left: 15px;">Settings</a>
+                <a class="header" href="/settings" style="padding-right: 15px; padding-left: 15px;">Settings</a>
                 <a class="header" href="/exit" style="padding-left: 15px;">Shutdown</a>
               </span>
             </div>
@@ -123,8 +94,8 @@
                   <br/>
                 </span>
               </xsl:if>
-              <span style="background: url('/Images/stars.png') 0 -16px repeat-x; width: 180px; height 15px; float: left;">
-                <span style="background: url('/Images/stars.png') 0 0 repeat-x; height 15px; width: {Title/IMDBrating * 10}%; float: left; color: transparent;">
+              <span style="background: url('/Images/stars.png') 0 -16px repeat-x; width: 180px; height: 15px; float: left;">
+                <span style="background: url('/Images/stars.png') 0 0 repeat-x; height: 15px; width: {Title/IMDBrating * 10}%; float: left; color: transparent;">
                   <p style="font-size: 15px;"></p>
                 </span>
               </span>

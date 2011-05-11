@@ -1,5 +1,6 @@
 import cherrypy, xml.etree.ElementTree as ET
 from cherrypy.lib.static import serve_file
+from PIL import Image
 import mymovies, sys, os, ConfigParser, urllib2, json, re
 from operator import itemgetter
 
@@ -202,23 +203,35 @@ class MainProgram:
         response = cherrypy.response
         if filename == "folder.jpg":
             if os.path.isfile(os.path.join(self.moviesdb[int(movieid)].Dir, filename)):
-                return serve_file(os.path.join(self.moviesdb[int(movieid)].Dir, filename), content_type='image/jpg')
+                img = Image.open(os.path.join(self.moviesdb[int(movieid)].Dir, filename))
+                response.headers['Content-Type'] = 'image/jpg'
+                img.thumbnail((180,270), Image.ANTIALIAS)
+                return img.tostring('jpeg','RGB')
+                #return serve_file(os.path.join(self.moviesdb[int(movieid)].Dir, filename), content_type='image/jpg')
             else:
                 
                 return serve_file(os.path.join(os.getcwd(), "Images", "noposter.png"), content_type='image/png')
         if filename == "backdrop.jpg":
-            if os.path.isfile(os.path.join(self.moviesdb[int(movieid)].Dir, filename)): 
-                return serve_file(os.path.join(self.moviesdb[int(movieid)].Dir, filename), content_type='image/jpg')
+            if os.path.isfile(os.path.join(self.moviesdb[int(movieid)].Dir, filename)):
+                img = Image.open(os.path.join(self.moviesdb[int(movieid)].Dir, filename))
+                response.headers['Content-Type'] = 'image/jpg'
+                img.thumbnail((450,250), Image.ANTIALIAS)
+                return img.tostring('jpeg','RGB')
+                #return serve_file(os.path.join(self.moviesdb[int(movieid)].Dir, filename), content_type='image/jpg')
             else:
                 return serve_file(os.path.join(os.getcwd(), "Images", "nobackdrop.png"), content_type='image/png')
+        
         if self.moviesdb[int(movieid)].HasXML:
             movie = open(os.path.join(self.moviesdb[int(movieid)].Dir, "mymovies.xml"))
             domroot = ET.parse(movie).getroot()
             ET.SubElement(domroot, 'unprocessed').text = str(self.unprocessedcount)
             ET.SubElement(domroot, 'movieID').text = self.moviesdb[int(movieid)].ID
-            #ET.SubElement(domroot, 'poster').text = os.path.join(self.moviesdb[int(movieid)].Dir, "folder.jpg").replace("\\" ,"/")
             output = '<?xml-stylesheet type="text/xsl" href="/Templates/moviepage.xsl"?>\n' + ET.tostring(domroot)
-        
+        else:
+            movie = mymovies.MyMovie(os.path.join(self.moviesdb[int(movieid)].Dir, "mymovies.xml"), True, self.moviesdb[int(movieid)].LocalTitle, self.moviesdb[int(movieid)].ProductionYear)
+            ET.SubElement(movie.dom, 'movieID').text = self.moviesdb[int(movieid)].ID
+            ET.SubElement(movie.dom, 'unprocessed').text = str(self.unprocessedcount)
+            output = '<?xml-stylesheet type="text/xsl" href="/Templates/moviepage.xsl"?>\n' + ET.tostring(movie.dom)
         response.headers['Content-Type'] = 'text/xml'
         return output  
 
@@ -257,22 +270,22 @@ def indent(elem, level=0):
 def google_url(searchterm, regexstring):
     #uses google to get a URL matching the regex string
     try:
-      url = ('http://ajax.googleapis.com/ajax/services/search/web?v=1.0&q=' + urllib2.quote(searchterm))
-      request = urllib2.Request(url, None, {'Referer': 'http://irc.00id.net'})
-      response = urllib2.urlopen(request)
+        url = ('http://ajax.googleapis.com/ajax/services/search/web?v=1.0&q=' + urllib2.quote(searchterm))
+        request = urllib2.Request(url, None, {'Referer': 'http://irc.00id.net'})
+        response = urllib2.urlopen(request)
 
-      results_json = json.load(response)
-      results = results_json['responseData']['results']
+        results_json = json.load(response)
+        results = results_json['responseData']['results']
     
-      for result in results:
-          m = re.search(regexstring,result['url'])   
-          if (m):
-             url = result['url']
-             url = url.replace('%25','%')
-             return url
-      return
+        for result in results:
+            m = re.search(regexstring,result['url'])   
+            if (m):
+                url = result['url']
+                url = url.replace('%25','%')
+                return url
+        return
     except:
-      return
+        return
 
 
 def main():

@@ -134,9 +134,37 @@ class MyMovie:
             return self._Role
     
     dom = None
-    def __init__(self, Path):
-        xml = open(Path)
-        self.dom = ET.parse(xml)
+    XMLpath = ""
+    def __init__(self, Path, new=False, name="",year=""):
+        if not new:
+            xml = open(Path)
+            self.dom = ET.parse(xml)
+        else:
+            root = ET.Element("Title")
+            ET.SubElement(root, 'LocalTitle').text = name
+            ET.SubElement(root, 'SortTitle').text = name
+            ET.SubElement(root, 'OriginalTitle').text = name
+            ET.SubElement(root, 'ProductionYear').text = year
+            ET.SubElement(root, 'Added')
+            ET.SubElement(root, 'RunningTime')
+            ET.SubElement(root, 'IMDBrating')
+            ET.SubElement(root, 'MPAARating')
+            ET.SubElement(root, 'Description')
+            ET.SubElement(root, 'Type')
+            ET.SubElement(root, 'LockData')
+            ET.SubElement(root, 'IMDB')
+            ET.SubElement(root, 'TMDbId')
+            g = ET.SubElement(root, 'Genres')
+            ET.SubElement(g, 'Genre')
+            ps = ET.SubElement(root, 'Persons')
+            p = ET.SubElement(ps, 'Person')
+            ET.SubElement(p, 'Name')
+            ET.SubElement(p, 'Type')
+            ET.SubElement(p, 'Role')
+            s = ET.SubElement(root, 'Studios')
+            ET.SubElement(s, 'Studio')
+            self.dom = root
+        self.XMLpath = Path
         #print tree.find('LocalTitle').text
         
     @property
