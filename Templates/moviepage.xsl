@@ -59,7 +59,7 @@
               <br/>
               <b>Genres</b><br/>
               <xsl:for-each select="Title/Genres/Genre">
-                <a href="/Genre/">
+                <a href="/Genre/{.}">
                   <xsl:value-of select="."/>
                 </a>
                 <br/>
@@ -108,7 +108,7 @@
                   <xsl:if test="not(Type='Actor')">
 
                     <b><xsl:value-of select="Type"/>: </b>
-                    <a href="/Person/">
+                    <a href="/Person/{Name}">
                       <xsl:value-of select="Name"/>
                     </a>
                     <br/>
@@ -127,7 +127,7 @@
                           <img src="/ImagesByName/{Name}/folder.jpg" style="width: 35px;"/>
                         </td>
                         <td class="person">
-                          <a href="/Person/">
+                          <a href="/Person/{Name}">
                             <xsl:value-of select="Name"/>
                           </a>
                         </td>

@@ -22,7 +22,8 @@ def scandirectory(self, path):
         try:
             mymovie = MyMovie(os.path.join(path, di, "mymovies.xml"))
             HasXML = True
-            movie = movies(mymovie.SortTitle, mymovie.LocalTitle, mymovie.ProductionYear, os.path.join(path, di), HasXML, mymovie.XMLComplete, [],[])
+            Actors = [person.Name.strip().lower() for person in mymovie.Persons]
+            movie = movies(mymovie.SortTitle, mymovie.LocalTitle, mymovie.ProductionYear, os.path.join(path, di), HasXML, mymovie.XMLComplete, mymovie.Genres,Actors, mymovie.IMDBrating)
         except Exception as inst:
             print inst
             self.unprocessedcount += 1
@@ -32,13 +33,12 @@ def scandirectory(self, path):
             year = year.replace(")", "")
             di = re.sub("\(.*\)", "", di).strip()
             di = re.sub("\[.*\]", "", di).strip()
-            movie = movies(di, di, year, os.path.join(path, di), HasXML, False, [],[])
-        
-        #ADD IMDB RATING TO MOVIES DB    
+            movie = movies(di, di, year, os.path.join(path, di), HasXML, False, [],[], "0.0")
+          
         self.moviesdb.append(movie)  
     
 class movies:
-    def __init__(self, SortTitle, LocalTitle, ProductionYear, Dir, HasXML, XMLComplete, Genres, Actors):
+    def __init__(self, SortTitle, LocalTitle, ProductionYear, Dir, HasXML, XMLComplete, Genres, Actors, IMDBRating):
         self._SortTitle = SortTitle
         self._LocalTitle = LocalTitle
         self._ProductionYear = ProductionYear
@@ -47,6 +47,7 @@ class movies:
         self._XMLComplete = XMLComplete
         self._Genres = Genres
         self._Actors = Actors
+        self._IMDBRating = IMDBRating
     
     def __getitem__(self, key):
         if key == "SortTitle": return self._SortTitle 

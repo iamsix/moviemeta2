@@ -1,6 +1,6 @@
 import cherrypy, xml.etree.ElementTree as ET
 from cherrypy.lib.static import serve_file
-import mymovies, sys, os, ConfigParser
+import mymovies, sys, os, ConfigParser, urllib2, json, re
 from operator import itemgetter
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -34,24 +34,32 @@ class MainProgram:
         self.moviesdb.sort(key=itemgetter("SortTitle"))
         for movie in self.moviesdb:
             movie.ID = str(self.moviesdb.index(movie))
+    refresh_movielist.exposed = True
     
     def unprocessed_movies(self): 
         
         root = ET.Element("movies")
+        
+        moviecount = 0
         for movie in self.moviesdb:
             if not movie.HasXML:
+                moviecount +=1
                 movietag = ET.SubElement(root, 'movie')
                 ET.SubElement(movietag, 'LocalTitle').text = movie.LocalTitle
                 ET.SubElement(movietag, 'ProductionYear').text = movie.ProductionYear
                 ET.SubElement(movietag, 'Link').text = movie.ID
         ET.SubElement(root, 'unprocessed').text = str(self.unprocessedcount)
+        ET.SubElement(root, 'listname').text = "Unprocessed Movies (%s)" % moviecount
         output = '<?xml-stylesheet type="text/xsl" href="Templates/index.xsl"?>' + ET.tostring(root)
         return output
     
     def movie_list(self):
         root = ET.Element("movies")
         ET.SubElement(root, 'unprocessed').text = str(self.unprocessedcount)
+        
+        moviecount = 0
         for movie in self.moviesdb:
+            moviecount +=1
             movietag = ET.SubElement(root, 'movie')
             if not movie.HasXML: 
                 ET.SubElement(movietag, 'XML').text = "none"
@@ -62,7 +70,9 @@ class MainProgram:
             ET.SubElement(movietag, 'LocalTitle').text = movie.LocalTitle
             ET.SubElement(movietag, 'ProductionYear').text = movie.ProductionYear
             ET.SubElement(movietag, 'Link').text = movie.ID
+            ET.SubElement(movietag, 'Path').text = movie.Dir.decode("utf-8", "ignore")
             
+        ET.SubElement(root, 'listname').text = "Movie List (%s)" % moviecount
         indent(root)
         output = '<?xml-stylesheet type="text/xsl" href="/Templates/index.xsl"?>\n' + ET.tostring(root)
         return output
@@ -98,6 +108,68 @@ class MainProgram:
         self.config.set("general", "Directories", ",".join(kwargs["mdirectory"]))
         self.config.write(open("main.conf", "w"))
     savesettings.exposed = True
+    
+    def buildmovielist(self, movie, XMLRoot):
+        pass
+
+    
+    def Person(self, Name):
+        root = ET.Element("movies")
+        ET.SubElement(root, 'unprocessed').text = str(self.unprocessedcount)
+        moviecount = 0
+        for movie in self.moviesdb:
+            if Name.strip().lower() in movie.Actors:
+                moviecount += 1
+                movietag = ET.SubElement(root, 'movie')
+                if not movie.HasXML: 
+                    ET.SubElement(movietag, 'XML').text = "none"
+                elif movie.XMLComplete: 
+                    ET.SubElement(movietag, 'XML').text = "complete"
+                else: 
+                    ET.SubElement(movietag, 'XML').text = "incomplete"
+                ET.SubElement(movietag, 'LocalTitle').text = movie.LocalTitle
+                ET.SubElement(movietag, 'ProductionYear').text = movie.ProductionYear
+                ET.SubElement(movietag, 'Link').text = movie.ID
+                ET.SubElement(movietag, 'Path').text = movie.Dir.decode("utf-8", "ignore")
+        
+        imdburl = google_url("site:imdb.com/name " + Name, "imdb.com/name/nm[0-9]*/")
+        
+        title = ET.SubElement(root, 'listname') #.text = 'Movies with %s (%s)' % (Name, moviecount)
+        ET.SubElement(title, 'a', {"href" : imdburl}).text = 'Movies with %s (%s)' % (Name, moviecount)
+        indent(root)
+        output = '<?xml-stylesheet type="text/xsl" href="/Templates/index.xsl"?>\n' + ET.tostring(root)
+        response = cherrypy.response
+        response.headers['Content-Type'] = 'text/xml'
+        return output
+    Person.exposed = True
+    
+    def Genre(self, Genre):
+        root = ET.Element("movies")
+        ET.SubElement(root, 'unprocessed').text = str(self.unprocessedcount)
+        moviecount = 0
+        for movie in self.moviesdb:
+            if Genre.strip() in movie.Genres:
+                moviecount += 1
+                print "cats"
+                movietag = ET.SubElement(root, 'movie')
+                if not movie.HasXML: 
+                    ET.SubElement(movietag, 'XML').text = "none"
+                elif movie.XMLComplete: 
+                    ET.SubElement(movietag, 'XML').text = "complete"
+                else: 
+                    ET.SubElement(movietag, 'XML').text = "incomplete"
+                ET.SubElement(movietag, 'LocalTitle').text = movie.LocalTitle
+                ET.SubElement(movietag, 'ProductionYear').text = movie.ProductionYear
+                ET.SubElement(movietag, 'Link').text = movie.ID
+                ET.SubElement(movietag, 'Path').text = movie.Dir.decode("utf-8", "ignore")
+        
+        ET.SubElement(root, 'listname').text = "%s Movies (%s)" % (Genre, moviecount)
+        indent(root)
+        output = '<?xml-stylesheet type="text/xsl" href="/Templates/index.xsl"?>\n' + ET.tostring(root)
+        response = cherrypy.response
+        response.headers['Content-Type'] = 'text/xml'
+        return output
+    Genre.exposed = True
         
     def validatedirectory(self, dir):
         response = cherrypy.response
@@ -163,6 +235,27 @@ def indent(elem, level=0):
     else:
         if level and (not elem.tail or not elem.tail.strip()):
             elem.tail = i
+        
+def google_url(searchterm, regexstring):
+    #uses google to get a URL matching the regex string
+    try:
+      url = ('http://ajax.googleapis.com/ajax/services/search/web?v=1.0&q=' + urllib2.quote(searchterm))
+      request = urllib2.Request(url, None, {'Referer': 'http://irc.00id.net'})
+      response = urllib2.urlopen(request)
+
+      results_json = json.load(response)
+      results = results_json['responseData']['results']
+    
+      for result in results:
+          m = re.search(regexstring,result['url'])   
+          if (m):
+             url = result['url']
+             url = url.replace('%25','%')
+             return url
+      return
+    except:
+      return
+
 
 def main():
     cherrypy.quickstart(MainProgram(), "/", 'cherrypy.conf')

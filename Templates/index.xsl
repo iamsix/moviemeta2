@@ -11,7 +11,24 @@
         a.header{color: #DDD; font-weight: bold; }
         #searchbox{padding: 3px 25px 4px 10px; background:transparent url('/Images/searchbox.png') 0 -24px no-repeat; width: 280px;}
       </style>
-      <body style="background-color: #4e4e4e; font-family: Arial;">
+
+      <script type="text/javascript">
+        function refreshlist()
+        {
+        req = new XMLHttpRequest();
+        req.open("GET","/refresh_movielist",true);
+        req.setRequestHeader("Content-type","text/plain");
+        req.send();
+
+        req.onreadystatechange=function() {
+        if (req.readyState==4) {
+        window.refresh();
+        };
+        };
+        }
+      </script>
+
+        <body style="background-color: #4e4e4e; font-family: Arial;">
         <div style="width: 97%; margin-left: auto; margin-right: auto; background-color: #d5d5d5;  border-left: 1px solid black; border-right: 1px solid black;">
           <div id="header" style="height: 117px; background-image: url('/Images/headerimg.png');background-repeat: repeat-x; padding-left: 15px;">
             <div style="float: right; margin-right: 15px; margin-top: 15px; height: 20px; wdith: 193px;">
@@ -30,7 +47,7 @@
               <span>
                 <a class="header" href="/list" style="padding-right: 15px; ">Movie List</a>
                 <a class="header" href="/" style="padding-right: 15px; padding-left: 15px;">Unprocessed Movies (<xsl:value-of select="movies/unprocessed"/>)</a>
-                <a class="header" style="padding-right: 15px; padding-left: 15px;">Cats</a>
+                <a class="header" href ="#" onclick="refreshlist()" style="padding-right: 15px; padding-left: 15px;">Cats</a>
               </span>
               <span style="float: right;padding-right: 15px;">
                 <a class="header" href="/settings" style="padding-right: 15px; padding-left: 15px;">Settings</a>
@@ -39,13 +56,18 @@
             </div>
           </div>
           <div id="content" style="padding: 15px 20px 15px 20px;">
-            <h2>Unprocessed Movies</h2>
+            <h2>
+              <xsl:copy-of select="movies/listname" />
+            </h2>
             <div style="">
               <ul>
               <xsl:for-each select="movies/movie">
                 <a>
                   <xsl:attribute name="href">
                     /movie/<xsl:value-of select="Link"/>
+                  </xsl:attribute>
+                  <xsl:attribute name="title">
+                    <xsl:value-of select="Path"/>
                   </xsl:attribute>
                 <li style ="padding-bottom: 5px;">
                   <xsl:if test="XML='none'">
