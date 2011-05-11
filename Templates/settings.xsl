@@ -9,16 +9,20 @@
 
       <style type="text/css">
         a.header{color: #DDD; font-weight: bold; }
+        a.movieXMLcomplete{color: green; padding-bottom: 5px;}
+        a.movieXMLnone{color: red; padding-bottom: 5px;}
+        a.movieXMLincomplete{color: #4f61c5; padding-bottom: 5px;}
         #searchbox{padding: 3px 25px 4px 10px; background:transparent url('/Images/searchbox.png') 0 -24px no-repeat; width: 280px;}
         #mdir{margin-left: 40px; width: 180px;}
         #invaliddir{margin-left: 40px; width: 180px; background: pink;}
+        #searchsuggestions{visibility: hidden; box-shadow: 0px 0px 8px #000; border-bottom-left-radius: 5px; border-bottom-right-radius: 5px; border: 1px solid #4e4e4e; padding-left: 5px; padding-right: 5px; padding-bottom: 5px; position: absolute; margin-left: 10px; background-color: #d5d5d5; min-width: 220px;}
       </style>
 
       <script type="text/javascript">
         var dirid=<xsl:value-of select="Settings/moviedircount"/>;
         function addDirInput()
         {
-        var container = document.getElementById("moviedirectories")
+        var container = document.getElementById("moviedirectories");
         var div = document.createElement("DIV");
         div.id = "dir" + dirid;
         var inpt = document.createElement("INPUT");
@@ -51,7 +55,7 @@
         {
         dir = input.value;
         req = new XMLHttpRequest();
-        req.open("POST","validatedirectory",true);
+        req.open("POST","/validatedirectory",true);
         req.setRequestHeader("Content-type","application/x-www-form-urlencoded ");
         req.send("dir=" + dir);
 
@@ -72,7 +76,36 @@
 
 
         }
+      </script>
 
+      <script type="text/javascript">
+        function searchsuggestion(input)
+        {
+        div = document.getElementById("searchsuggestions");
+        searchstring = input.value;
+        req = new XMLHttpRequest();
+        req.open("POST","/searchsuggestions",true);
+        req.setRequestHeader("Content-type","application/x-www-form-urlencoded ");
+        req.send("search=" + searchstring);
+
+        req.onreadystatechange=function()
+        {
+        if (req.readyState==4)
+        {
+        if (req.status==200)
+        {
+        div.innerHTML = req.responseText;
+        div.style.visibility = "visible";
+        }
+        }
+
+        }
+        }
+
+        function hideSuggestions()
+        {
+        setTimeout('document.getElementById("searchsuggestions").style.visibility = "hidden"', 250)
+        }
 
       </script>
 
@@ -116,9 +149,10 @@
             <div style="float: right; margin-right: 15px; margin-top: 15px; height: 20px; ">
               <form action="/search" method="get">
                 <span id="searchbox">
-                  <input type="text" placeholder="Search" name="search" style="background: transparent; border: none;font-weight: bold; color: #555; width: 225px;"/>
+                  <input type="text" onblur='hideSuggestions()' onkeyup="searchsuggestion(this)" placeholder="Search" name="search" style="background: transparent; border: none;font-weight: bold; color: #555; width: 225px;"/>
                 </span>
                 <br />
+                <div id="searchsuggestions"></div>
                 <span style="float: right; font-size: 9pt; text-align: right; font-weight: bold;">
                   <a class="header">Advanced</a>
                 </span>

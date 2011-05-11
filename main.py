@@ -180,6 +180,24 @@ class MainProgram:
         return ""
     validatedirectory.exposed = True
     
+    def searchsuggestions(self, search):
+        output = ""
+        if len(search) >= 1:
+            for movie in self.moviesdb:
+                if re.search("\\b" + search, movie.LocalTitle, re.IGNORECASE):
+                    link = "/movie/" + movie.ID
+                    name = "%s (%s)" % (movie.LocalTitle, movie.ProductionYear)
+                    if not movie.HasXML: 
+                        xml = "movieXMLnone"
+                    elif movie.XMLComplete: 
+                        xml = "movieXMLcomplete"
+                    else: 
+                        xml = "movieXMLincomplete"
+                    output = output + '<a href="%s" class="%s">%s</a><br />' % (link, xml, name)
+            if not output: output = "No movies found"
+            return output
+    searchsuggestions.exposed = True
+    
     def movie(self, movieid, filename=None):
         response = cherrypy.response
         if filename == "folder.jpg":

@@ -50,7 +50,7 @@ class movies:
         self._IMDBRating = IMDBRating
     
     def __getitem__(self, key):
-        if key == "SortTitle": return self._SortTitle 
+        if key == "SortTitle": return self._SortTitle.lower()
         else: raise KeyError
         pass
     

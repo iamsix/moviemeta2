@@ -9,7 +9,12 @@
       <style type="text/css">
         a{color: #4f61c5;}
         a.header{color: #DDD; font-weight: bold; }
+        a.movieXMLcomplete{color: green; padding-bottom: 5px;}
+        a.movieXMLnone{color: red; padding-bottom: 5px;}
+        a.movieXMLincomplete{color: #4f61c5; padding-bottom: 5px;}
         #searchbox{padding: 3px 25px 4px 10px; background:transparent url('/Images/searchbox.png') 0 -24px no-repeat; width: 280px;}
+        #invaliddir{margin-left: 40px; width: 180px; background: pink;}
+        #searchsuggestions{visibility: hidden; box-shadow: 0px 0px 8px #000; border-bottom-left-radius: 5px; border-bottom-right-radius: 5px; border: 1px solid #4e4e4e; padding-left: 5px; padding-right: 5px; padding-bottom: 5px; position: absolute; margin-left: 10px; background-color: #d5d5d5; min-width: 220px;}
       </style>
 
       <script type="text/javascript">
@@ -22,21 +27,51 @@
 
         req.onreadystatechange=function() {
         if (req.readyState==4) {
-        window.refresh();
+        location.reload(true);
         };
         };
         }
+
+        function searchsuggestion(input)
+        {
+        div = document.getElementById("searchsuggestions");
+        searchstring = input.value;
+        req = new XMLHttpRequest();
+        req.open("POST","/searchsuggestions",true);
+        req.setRequestHeader("Content-type","application/x-www-form-urlencoded ");
+        req.send("search=" + searchstring);
+
+        req.onreadystatechange=function()
+        {
+        if (req.readyState==4)
+        {
+        if (req.status==200)
+        {
+        div.innerHTML = req.responseText;
+        div.style.visibility = "visible";
+        }
+        }
+
+        }
+        }
+
+        function hideSuggestions()
+        {
+        setTimeout('document.getElementById("searchsuggestions").style.visibility = "hidden"', 250)
+        }
+
       </script>
 
         <body style="background-color: #4e4e4e; font-family: Arial;">
         <div style="width: 97%; margin-left: auto; margin-right: auto; background-color: #d5d5d5;  border-left: 1px solid black; border-right: 1px solid black;">
           <div id="header" style="height: 117px; background-image: url('/Images/headerimg.png');background-repeat: repeat-x; padding-left: 15px;">
-            <div style="float: right; margin-right: 15px; margin-top: 15px; height: 20px; wdith: 193px;">
+            <div style="float: right; margin-right: 15px; margin-top: 15px; height: 20px;">
               <form action="/search" method="get">
                 <span id="searchbox">
-                  <input type="text" placeholder="Search" name="search" style="background: transparent; border: none;font-weight: bold; color: #555; width: 225px;"/>
+                  <input type="text" onblur='hideSuggestions()' onkeyup="searchsuggestion(this)" placeholder="Search" name="search" style="background: transparent; border: none;font-weight: bold; color: #555; width: 225px;"/>
                 </span>
                 <br />
+                <div id="searchsuggestions"></div>
                 <span style="float: right; font-size: 9pt; text-align: right; font-weight: bold;">
                   <a class="header">Advanced</a>
                 </span>
@@ -69,13 +104,10 @@
                   <xsl:attribute name="title">
                     <xsl:value-of select="Path"/>
                   </xsl:attribute>
+                  <xsl:attribute name="class">
+                    movieXML<xsl:value-of select="XML"/>
+                  </xsl:attribute>
                 <li style ="padding-bottom: 5px;">
-                  <xsl:if test="XML='none'">
-                    <xsl:attribute name="style">color: red; padding-bottom: 5px;</xsl:attribute>
-                  </xsl:if>
-                  <xsl:if test="XML='complete'">
-                    <xsl:attribute name="style">color: green; padding-bottom: 5px;</xsl:attribute>
-                  </xsl:if>
                   <xsl:value-of select="LocalTitle"/> (<xsl:value-of select="ProductionYear"/>)
                 </li>
                 </a>
