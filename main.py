@@ -184,6 +184,7 @@ class MainProgram:
     def searchsuggestions(self, search):
         output = ""
         if len(search) >= 1:
+            output = '<ul style="list-style-type: none; padding: 0; margin: 0;">'
             for movie in self.moviesdb:
                 if re.search("\\b" + search, movie.LocalTitle, re.IGNORECASE):
                     link = "/movie/" + movie.ID
@@ -194,8 +195,11 @@ class MainProgram:
                         xml = "movieXMLcomplete"
                     else: 
                         xml = "movieXMLincomplete"
-                    output = output + '<a href="%s" class="%s">%s</a><br />' % (link, xml, name)
-            if not output: output = "No movies found"
+                    output = output + '<a href="%s" class="%s"><li style="padding-left: 5px; padding-right: 5px;">%s</li></a>' % (link, xml, name)
+            if output == '<ul style="list-style-type: none; padding: 0; margin: 0;">': 
+                output = "No movies found"
+            else:
+                output = output + '</ul>'
             return output
     searchsuggestions.exposed = True
     
@@ -247,8 +251,21 @@ class MainProgram:
         response = cherrypy.response
         response.headers['Content-Type'] = 'text/xml'
         return self.unprocessed_movies()
-        
     index.exposed = True
+    
+    def saveMovieXML(self, movieID, XML):
+        #Saves an edit form back to the mymovies.xml
+        #the form is returned back as XML ie <LocalTitle>something</LocalTitle>
+        #multiple XML XMLNodes could be returned in the vlaue
+        pass
+    saveMovieXML.exposed = True
+    
+    def getMovieXML(self, movieID):
+        #Returns pure XML copies of the requested xml element
+        #Can return the full children of an XML element
+        return serve_file(os.path.join(self.moviesdb[int(movieID)].Dir, "mymovies.xml"), content_type='text/xml')
+        pass
+    getMovieXML.exposed = True
     
     def exit(self):
         sys.exit(0)

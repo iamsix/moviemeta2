@@ -8,8 +8,11 @@
         <title>Movie &lt;meta&gt;</title>
       </head>
 
-	  <script type="text/javascript" src="/Scripts/searchsuggestions.js"></script>
-      
+	  <script type="text/javascript" src="/Scripts/searchsuggestions.js" />
+      <script type="text/javascript" src="/Scripts/jquery-1.6.js" />
+      <script type="text/javascript" src="/Scripts/jquery-ui-1.8.12.custom.min.js" />
+      <script type="text/javascript" src="/Scripts/jquery-ui-timepicker-addon.js" />
+      <script type="text/javascript" src="/Scripts/editmovie.js" />
       
       <style type="text/css">
         a.header{color: #DDD; font-weight: bold; }
@@ -20,8 +23,17 @@
         #searchbox{padding: 3px 25px 4px 10px; background:transparent url('/Images/searchbox.png') 0 -24px no-repeat; width: 280px;}
         td.castpic{padding: 2px 5px 2px 5px}
         td.person{padding: 5px 60px 0px 30px}
-        #searchsuggestions{visibility: hidden; box-shadow: 0px 0px 8px #000; border-bottom-left-radius: 5px; border-bottom-right-radius: 5px; border: 1px solid #4e4e4e; padding-left: 5px; padding-right: 5px; padding-bottom: 5px; position: absolute; margin-left: 10px; background-color: #d5d5d5; min-width: 220px;}
+        #searchsuggestions{visibility: hidden; box-shadow: 0px 0px 8px #000; border-bottom-left-radius: 5px; border-bottom-right-radius: 5px; border: 1px solid #4e4e4e; padding-bottom: 5px; position: absolute; margin-left: 10px; background-color: #d5d5d5; min-width: 220px;}
+        
+        #ui-datepicker-div { font-size: 12px; }
+        .ui-autocomplete, .ui-menu ui-widget, .ui-widget-content, .ui-corner-all{ font-size: 12px; }
+
       </style>
+      
+     	<style type="text/css">
+			@import "/Templates/jquery-ui-1.8.12.custom.css";
+		</style>
+      
       <body style="background-color: #4e4e4e; font-family: Arial; height: 100%;">
         <div style="width: 97%; padding-bottom: 25px; margin-left: auto; margin-right: auto; background-color: #d5d5d5; border-left: 1px solid black; border-right: 1px solid black; overflow: auto;">
           <div id="header" style="height: 117px; background-image: url('/Images/headerimg.png');background-repeat: repeat-x; padding-left: 15px;">
@@ -51,19 +63,23 @@
             </div>
           </div>
           <div id="content" style="padding: 15px 20px 15px 20px; height: 100%;">
-            <div id="lefcol" style="width: 200px; float:left;overflow: auto; font-size: 10pt; padding-bottom: 15px;">
+            <div id="lefcol" style="width: 230px; float:left;overflow: auto; font-size: 10pt; padding-bottom: 15px;">
+             
               <b>Poster</b><br/>
               <img src="/movie/{Title/movieID}/folder.jpg" style="margin-top: 10px; width: 180px"/>
               <br/><br/>
-              <b>Movie Info</b><br/>
-              Content Rating: <xsl:value-of select="Title/MPAARating"/><br/>
-              Runtime: <xsl:value-of select="Title/RunningTime"/><br/>
-              Aspect Ratio: <xsl:value-of select="Title/AspectRatio"/><br/>
-              Type: <xsl:value-of select="Title/Type"/><br/>
-              <br/>
-              IMDB: <a href="http://www.imdb.com/title/{Title/IMDB}/">Link</a><br/>
-              TMDb: <a href="http://www.themoviedb.org/movie/{Title/TMDbId}">Link</a><br/>
-              <br/>
+	          <span style="font-size: 12pt; font-weight: bold;">Movie Info </span> <a href="#" onclick="editMovieInfo()">[edit]</a><br/>
+	          <div id="movieinfo">
+	              <b>Content Rating: </b> <span id="spMPAARating"><xsl:value-of select="Title/MPAARating"/></span><br/>
+	              <b>Runtime: </b> <span id="spRunningTime"><xsl:value-of select="Title/RunningTime"/></span><br/>
+	              <b>Aspect Ratio: </b> <span id="spAspectRatio"><xsl:value-of select="Title/AspectRatio"/></span><br/>
+	              <b>Type: </b> <span id="spType"><xsl:value-of select="Title/Type"/></span><br/>
+	              <b>Added: </b> <span id="spAdded"><xsl:value-of select="Title/Added"/></span><br/>
+	              <br/>
+	              <b>IMDB: </b> <span id="spIMDB"><a href="http://www.imdb.com/title/{Title/IMDB}/">Link</a></span><br/>
+	              <b>TMDb: </b> <span id="spTMDbId"><a href="http://www.themoviedb.org/movie/{Title/TMDbId}">Link</a></span><br/>
+	          </div>
+	          <br/>
               <b>Genres</b><br/>
               <xsl:for-each select="Title/Genres/Genre">
                 <a href="/Genre/{.}">
@@ -79,7 +95,7 @@
               
               
             </div>
-            <div id="rightcol" style="height: 100%; font-size: 10pt;">
+            <div id="rightcol" style="height: 100%; font-size: 10pt; overflow: auto;">
               
               <span id="movietitle" style="font-weight: bold; font-size: 20pt;">
                 <xsl:value-of select="Title/LocalTitle"/>

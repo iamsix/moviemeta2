@@ -154,7 +154,7 @@
                     <xsl:attribute name="id">
                       <xsl:value-of select="DirID"/>
                     </xsl:attribute>
-                    <input type="text" name="mdirectory" id="mdir" Title="Example: D:\Movies" onblur="validateFSDir(this)">
+                    <input type="text" name="mdirectory" id="mdir" Title="Example: D:\Movies" onkeyup="validateFSDir(this)">
                       <xsl:attribute name="value">
                         <xsl:value-of select="Dir"/>
                       </xsl:attribute>
