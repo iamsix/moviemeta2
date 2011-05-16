@@ -27,12 +27,16 @@
         
         #ui-datepicker-div { font-size: 12px; }
         .ui-autocomplete, .ui-menu ui-widget, .ui-widget-content, .ui-corner-all{ font-size: 12px; }
+        
+        .sortablelist { list-style-type: none; margin: 0; padding: 5px; background: #eee; }
+		.sortablelist li { margin: 0 3px 3px 3px; padding: 0.1em; padding-left: 1.5em; font-size: 1.4em; height: 18px; }
+		.sortablelist li span { position: absolute; margin-left: -1.3em; margin-top: 0.3em; }
 
       </style>
       
-     	<style type="text/css">
-			@import "/Templates/jquery-ui-1.8.12.custom.css";
-		</style>
+      <style type="text/css">
+		@import "/Templates/jquery-ui-1.8.12.custom.css";
+	  </style>
       
       <body style="background-color: #4e4e4e; font-family: Arial; height: 100%;">
         <div style="width: 97%; padding-bottom: 25px; margin-left: auto; margin-right: auto; background-color: #d5d5d5; border-left: 1px solid black; border-right: 1px solid black; overflow: auto;">
@@ -63,7 +67,7 @@
             </div>
           </div>
           <div id="content" style="padding: 15px 20px 15px 20px; height: 100%;">
-            <div id="lefcol" style="width: 230px; float:left;overflow: auto; font-size: 10pt; padding-bottom: 15px;">
+            <div id="lefcol" style="width: 210px; float:left;overflow: auto; font-size: 10pt; padding-bottom: 15px; padding-right: 20px;">
              
               <b>Poster</b><br/>
               <img src="/movie/{Title/movieID}/folder.jpg" style="margin-top: 10px; width: 180px"/>
@@ -81,87 +85,100 @@
 	          </div>
 	          <br/>
               <b>Genres</b><br/>
+              <span id="spGenres">
               <xsl:for-each select="Title/Genres/Genre">
                 <a href="/Genre/{.}">
                   <xsl:value-of select="."/>
                 </a>
                 <br/>
               </xsl:for-each>
+              </span>
               <br/><b>Studios</b><br/>
+              <span id="spStudios">
               <xsl:for-each select="Title/Studios/Studio">
                 <xsl:value-of select="."/>
                 <br/>
               </xsl:for-each>
+              </span>
               
               
             </div>
-            <div id="rightcol" style="height: 100%; font-size: 10pt; overflow: auto;">
+            <div id="rightcol" style="height: 100%; font-size: 10pt; overflow: auto; padding-right: 10px;">
+            	<img src="/movie/{Title/movieID}/backdrop.jpg" style="Height: 250px; padding-top: 10px; float: right;"/>
+              <span id="titles">
+	              <span id="movietitle" style="font-weight: bold; font-size: 20pt;">
+	                <xsl:value-of select="Title/LocalTitle"/>
+	              </span>
+	              <span id="movieyear" style="font-weight: bold; font-size: 16pt; color: grey;">
+	                (<xsl:value-of select="Title/ProductionYear"/>)
+	              </span>
+	              <br/>
+	              <xsl:if test="not(Title/OriginalTitle=Title/LocalTitle)">
+	                <span id="originaltitle" style="font-size: 10pt; color: grey; font-style: italic;">
+	                  <xsl:value-of select="Title/OriginalTitle"/>
+	                  <br/>
+	                </span>
+	              </xsl:if>
+              </span>
+              <span id="movierating">
+	              <span style="background: url('/Images/stars.png') 0 -16px repeat-x; width: 180px; height: 15px; float: left;">
+	                <span style="background: url('/Images/stars.png') 0 0 repeat-x; height: 15px; width: {Title/IMDBrating * 10}%; float: left; color: transparent;">
+	                  <p style="font-size: 15px;"></p>
+	                </span>
+	              </span>
               
-              <span id="movietitle" style="font-weight: bold; font-size: 20pt;">
-                <xsl:value-of select="Title/LocalTitle"/>
+	              <span style="padding-left: 5px; color: #7d6432; font-weight: bold; font-size: 12pt;">
+	                <xsl:value-of select="Title/IMDBrating"/>
+	              </span> / 10
               </span>
-              <span id="movieyear" style="font-weight: bold; font-size: 16pt; color: grey;">
-                (<xsl:value-of select="Title/ProductionYear"/>)
-              </span>
-              <br/>
-              <xsl:if test="not(Title/OriginalTitle=Title/LocalTitle)">
-                <span id="originaltitle" style="font-size: 10pt; color: grey; font-style: italic;">
-                  <xsl:value-of select="Title/OriginalTitle"/>
-                  <br/>
-                </span>
-              </xsl:if>
-              <span style="background: url('/Images/stars.png') 0 -16px repeat-x; width: 180px; height: 15px; float: left;">
-                <span style="background: url('/Images/stars.png') 0 0 repeat-x; height: 15px; width: {Title/IMDBrating * 10}%; float: left; color: transparent;">
-                  <p style="font-size: 15px;"></p>
-                </span>
-              </span>
-              <span style="padding-left: 5px; color: #7d6432; font-weight: bold; font-size: 12pt;">
-                <xsl:value-of select="Title/IMDBrating"/>
-              </span> / 10
-              <br/><img src="/movie/{Title/movieID}/backdrop.jpg" style="Height: 250px; padding-top: 10px;"/><br/>
+              <br/><br/>
               <div style="">
                 <b>Overview</b>
                 <hr/>                
-                <xsl:value-of select="Title/Description"/>
+                <span id="moviedescription"><xsl:value-of select="Title/Description"/></span>
                 <br/>
                 <br/>
                 <b>Crew</b>
                 <hr/>
-                <xsl:for-each select="Title/Persons/Person">
-                  <xsl:if test="not(Type='Actor')">
-
-                    <b><xsl:value-of select="Type"/>: </b>
-                    <a href="/Person/{Name}">
-                      <xsl:value-of select="Name"/>
-                    </a>
-                    <br/>
-
-                  </xsl:if>
-                </xsl:for-each>
+                <span id="moviecrew">
+	                <xsl:for-each select="Title/Persons/Person">
+	                  <xsl:if test="not(Type='Actor')">
+	
+	                    <b><xsl:value-of select="Type"/>: </b>
+	                    <a href="/Person/{Name}">
+	                      <xsl:value-of select="Name"/>
+	                    </a>
+	                    <br/>
+	
+	                  </xsl:if>
+	                </xsl:for-each>
+                </span>
                 <br/>
                 <b>Cast</b>
                 <hr/>
-                <table id="cast" cellspacing="0" cellpadding="0" border="0">
-                  <tbody>
-                  <xsl:for-each select="Title/Persons/Person">
-                    <xsl:if test="Type='Actor'">
-                      <tr>
-                        <td class="castpic">
-                          <img src="/ImagesByName/{Name}/folder.jpg" style="width: 35px;"/>
-                        </td>
-                        <td class="person">
-                          <a href="/Person/{Name}">
-                            <xsl:value-of select="Name"/>
-                          </a>
-                        </td>
-                        <td class="character">
-                          as <xsl:value-of select="Role"/>
-                        </td>
-                      </tr>
-                    </xsl:if>
-                  </xsl:for-each>
-                  </tbody>
-                </table>
+                <span id="moviecast">
+	                <table id="cast" cellspacing="0" cellpadding="0" border="0">
+	                  <tbody>
+	                  <xsl:for-each select="Title/Persons/Person">
+	                    <xsl:if test="Type='Actor'">
+	                      <tr>
+	                        <td class="castpic">
+	                          <img src="/ImagesByName/{Name}/folder.jpg" style="width: 35px;"/>
+	                        </td>
+	                        <td class="person">
+	                          <a href="/Person/{Name}">
+	                            <xsl:value-of select="Name"/>
+	                          </a>
+	                        </td>
+	                        <td class="character">
+	                          as <xsl:value-of select="Role"/>
+	                        </td>
+	                      </tr>
+	                    </xsl:if>
+	                  </xsl:for-each>
+	                  </tbody>
+	                </table>
+				</span>              
               </div>
             </div>
           </div>

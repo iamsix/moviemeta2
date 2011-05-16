@@ -1,4 +1,24 @@
 
+function rmListItem(child)
+{
+	child.parentNode.parentNode.removeChild(child.parentNode);
+}
+
+function addListItem(itemchild)
+{
+	var list = $(itemchild.parentNode).draggable( "option", "connectToSortable" );
+	var node = $(itemchild.parentNode).clone();
+	node.children("a").html("x").attr('onclick', 'rmListItem(this)');
+	$(list).append(node);
+		//'<li><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input type="text" value="' + $(itemchild.parentNode).children("input").val()  + '" /><a href="#" onclick="rmListItem(this)">x</a></li>')
+	$(itemchild.parentNode).children("input").val('')
+}
+var xmldoc;
+
+function saveMovieInfo()
+{
+	
+}
 
 function editMovieInfo()
 {
@@ -9,6 +29,7 @@ function editMovieInfo()
 		data: "movieID=" + movieid,
 		dataType: 'xml',
 		success: function(data) {
+			xmldoc = data;
 			var option = $(data).find('MPAARating').text();
 			$('#spMPAARating').html('<br /><input id="MPAARating" value="' + option + '" />');
 			var MPAARatings = ["G", "PG", "PG-13", "R", "NC-17", "NR"]
@@ -16,7 +37,7 @@ function editMovieInfo()
 				source: MPAARatings,
 				minLength: 0
 			});
-			$('#MPAARating').click(function() { $('#MPAARating').autocomplete( "search", "" ); });
+			$('#MPAARating').click(function() { $(this).autocomplete( "search", "" ); });
 
 			option = $(data).find('RunningTime').text();
 			$('#spRunningTime').html('<br /><input id="RunningTime" value="' + option + '" />');
@@ -28,22 +49,22 @@ function editMovieInfo()
 				source: AspectRatios,
 				minLength: 0
 			});
-			$('#AspectRatio').click(function() { $('#AspectRatio').autocomplete( "search", "" ); });
+			$('#AspectRatio').click(function() { $(this).autocomplete( "search", "" ); });
 			
-			option = $(data).find('Type').eq(0).text();
+			option = $(data).children('Title').children('Type').text();
 			$('#spType').html('<br /><input id="Type" value="' + option + '" />');
-			var Types = ["XviD", "x264", "DVD", "HD-DVD", "Blu-Ray"]
+			var Types = ["XviD", "DivX", "x264", "DVD", "HD-DVD", "Blu-Ray"]
 			$( "#Type" ).autocomplete({
 				source: Types,
 				minLength: 0
 			});
-			$('#Type').click(function() { $('#Type').autocomplete( "search", "" ); });
+			$('#Type').click(function() { $(this).autocomplete( "search", "" ); });
 			
 			option = $(data).find('Added').text();
 			$('#spAdded').html('<br /><input id="Added" value="' + option + '" />');
 			$( "#Added" ).datetimepicker({
 				ampm: true,
-				timeFormat: 'hh:mm:ss'
+				timeFormat: 'hh:mm:ss TT'
 			});
 			
 			option = $(data).find('IMDB').text();
@@ -51,6 +72,127 @@ function editMovieInfo()
 			
 			option = $(data).find('TMDbId').text();
 			$('#spTMDbId').html('<br /><input id="TMDbId" value="' + option + '" />');
+			
+			var Genres = ["Action", "Adventure", "Animation", "Comedy", "Crime",
+			"Disaster", "Documentary", "Drama", "Family", "Fantasy", "Horror", "Indie",
+			"Martial Arts", "Music", "Mystery", "Romance", "Science Fiction", 
+			"Sports Film", "Suspense","Thriller", "Western"]
+			option = $(data).find('Genre');
+			var genrelist = $('<ul class="sortablelist" id="GenreList"></ul>');
+			for (i = 0; i <= option.length-1; i++) {
+				genrelist.append('<li><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input class="genreAC" type="text" value="' + option.eq(i).text() + '" /><a href="#" onclick="rmListItem(this)">x</a></li>');
+			}
+			$('#spGenres').html('<ul class="sortablelist"><li id="newGenre"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input id="newGenrei" type="text" placeholder="New Genre" /><a href="#" onclick="addListItem(this)">+</a></li></ul>');
+			genrelist.appendTo('#spGenres');
+			
+			$( ".genreAC" ).autocomplete({
+				source: Genres,
+				minLength: 0
+			});	
+			$( "#newGenrei" ).autocomplete({
+				source: Genres,
+				minLength: 0,
+				select: function(event, ui) {$(this).val(ui.item.value); 
+											addListItem(this);
+											return false;}
+			});	
+			
+			$('#newGenrei').click(function() { $(this).autocomplete( "search", "" ); });		
+			$( "#GenreList" ).sortable({
+				receive: function() { $(this).children("li").children("a").html("x").attr('onclick', 'rmListItem(this)');}	
+			});
+			
+			$( "#newGenre" ).draggable({
+				connectToSortable: "#GenreList",
+				helper: "clone",
+				revert: "invalid"
+			});
+			
+			option = $(data).find('Studio');
+			var studiolist = $('<ul class="sortablelist" id="StudioList"></ul>');
+			for (i = 0; i <= option.length-1; i++) {
+				studiolist.append('<li><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input type="text" value="' + option.eq(i).text() + '" /><a href="#" onclick="rmListItem(this)">x</a></li>');
+			}			
+			$('#spStudios').html('<ul class="sortablelist"><li id="newStudio"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input type="text" placeholder="New Studio" /><a href="#" onclick="addListItem(this)">+</a></li></ul>');
+			studiolist.appendTo('#spStudios');	
+				
+			$( "#StudioList" ).sortable({
+				receive: function() { $(this).children("li").children("a").html("x").attr('onclick', 'rmListItem(this)');}	
+			});
+			
+			$( "#newStudio" ).draggable({
+				connectToSortable: "#StudioList",
+				helper: "clone",
+				revert: "invalid"
+			});
+			
+			
+			var div = $('#titles');
+			div.html('');
+			option = $(data).find('LocalTitle').text();
+			div.append('<b>Local Title:</b> <br /><input style="width: 250px;" id="LocalTitle" value="' + option + '" /><br />')
+			option = $(data).find('OriginalTitle').text();
+			div.append('<b>Original Title:</b> <br /><input style="width: 250px;" id="OriginalTitle" value="' + option + '" /><br />')
+			option = $(data).find('SortTitle').text();
+			div.append('<b>Sorting Title:</b> <br /><input style="width: 250px;" id="SortTitle" value="' + option + '" /><br />')
+			option = $(data).find('ProductionYear').text();
+			div.append('<b>Production Year:</b> <br /><input id="ProductionYear" value="' + option + '" /><br />')
+			option = $(data).find('IMDBrating').text();
+			$('#movierating').html('<b>Movie Rating:</b> <br /><span id="IMDBRating"></span><div style="width: 250px;" id="RatingSlider"><div>')
+			$( "#RatingSlider" ).slider({
+				value: option,
+				min: 0,
+				max: 10,
+				step: 0.1,
+				slide: function( event, ui ) {
+					$( "#IMDBRating" ).text(ui.value);
+				}
+			});
+			$( "#IMDBRating" ).text( $( "#RatingSlider" ).slider( "value" ) );
+			
+			option = $(data).find('Description').text();
+			$('#moviedescription').html('<textarea id="Description" style="width: 100%;  height: 100px;">' + option  + '</textarea>')
+			
+			option = $(data).find('Person');
+			var crewlist = $('<ul class="sortablelist" id="CrewList"></ul>');
+			for (i = 0; i <= option.length-1; i++) {
+				if (option.eq(i).children('Type').text() != "Actor")
+				{
+					crewlist.append('<li><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input id="crewname" type="text" value="' + option.eq(i).children('Name').text() + '" /> as: <input id="crewjob" type="text" value="' + option.eq(i).children('Type').text() +'" /><a href="#" onclick="rmListItem(this)">x</a></li>');					
+				}
+			}
+			$('#moviecrew').html('<ul class="sortablelist"><li id="newCrew"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input id="crewname" type="text" placeholder="Name" /> as: <input id="crewjob" type="text" placeholder="Job" /><a href="#" onclick="addListItem(this)">+</a></li></ul>')
+			crewlist.appendTo('#moviecrew');
+			$( "#newCrew" ).draggable({
+				connectToSortable: "#CrewList",
+				helper: "clone",
+				revert: "invalid"
+			});	
+			
+			$( "#CrewList" ).sortable({
+				receive: function() { $(this).children("li").children("a").html("x").attr('onclick', 'rmListItem(this)');}	
+			});
+			
+			
+			var castlist = $('<ul class="sortablelist" id="ActorList"></ul>');
+			for (i = 0; i <= option.length-1; i++) {
+				if (option.eq(i).children('Type').text() == "Actor")
+				{
+					castlist.append('<li><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input id="castname" type="text" value="' + option.eq(i).children('Name').text() + '" /> as: <input id="castrole" type="text" value="' + option.eq(i).children('Role').text() +'" /><a href="#" onclick="rmListItem(this)">x</a></li>');					
+				}
+			}
+			$('#moviecast').html('<ul class="sortablelist"><li id="newCast"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input id="castname" type="text" placeholder="Actor" /> as: <input id="castrole" type="text" placeholder="Role" /><a href="#" onclick="addListItem(this)">+</a></li></ul>')
+			castlist.appendTo('#moviecast');
+			$( "#newCast" ).draggable({
+				connectToSortable: "#ActorList",
+				helper: "clone",
+				revert: "invalid"
+			});
+			
+			$( "#ActorList" ).sortable({
+				receive: function() { $(this).children("li").children("a").html("x").attr('onclick', 'rmListItem(this)');}	
+			});
+		
 		}
 	});
 }

@@ -74,7 +74,7 @@ class MainProgram:
             ET.SubElement(movietag, 'Path').text = movie.Dir.decode("utf-8", "ignore")
             
         ET.SubElement(root, 'listname').text = "Movie List (%s)" % moviecount
-        indent(root)
+        #indent(root)
         output = '<?xml-stylesheet type="text/xsl" href="/Templates/index.xsl"?>\n' + ET.tostring(root)
         return output
     
@@ -98,7 +98,7 @@ class MainProgram:
         ET.SubElement(root, 'moviedircount').text = str(x + 1)
         ET.SubElement(root, 'unprocessed').text = str(self.unprocessedcount)
         ET.SubElement(root, 'fileExtensions').text = self.config.get("general","FileExtensions")
-        indent(root)
+        #indent(root)
         output = '<?xml-stylesheet type="text/xsl" href="/Templates/settings.xsl"?>\n' + ET.tostring(root)
         response = cherrypy.response
         response.headers['Content-Type'] = 'text/xml'
@@ -137,7 +137,7 @@ class MainProgram:
         
         title = ET.SubElement(root, 'listname') #.text = 'Movies with %s (%s)' % (Name, moviecount)
         ET.SubElement(title, 'a', {"href" : imdburl}).text = 'Movies with %s (%s)' % (Name, moviecount)
-        indent(root)
+        #indent(root)
         output = '<?xml-stylesheet type="text/xsl" href="/Templates/index.xsl"?>\n' + ET.tostring(root)
         response = cherrypy.response
         response.headers['Content-Type'] = 'text/xml'
@@ -165,7 +165,7 @@ class MainProgram:
                 ET.SubElement(movietag, 'Path').text = movie.Dir.decode("utf-8", "ignore")
         
         ET.SubElement(root, 'listname').text = "%s Movies (%s)" % (Genre, moviecount)
-        indent(root)
+        #indent(root)
         output = '<?xml-stylesheet type="text/xsl" href="/Templates/index.xsl"?>\n' + ET.tostring(root)
         response = cherrypy.response
         response.headers['Content-Type'] = 'text/xml'
