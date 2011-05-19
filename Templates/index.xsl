@@ -7,6 +7,7 @@
         <title>Movie &lt;meta&gt;</title>
       </head>
       <style type="text/css">
+      	body {background: #232323 url('/Images/bg-gradient.png') repeat-x; font-family: Arial}
         a{color: #4f61c5;}
         a.header{color: #DDD; font-weight: bold; }
         a.movieXMLcomplete{color: green;}
@@ -34,7 +35,7 @@
       </script>
       <script type="text/javascript" src="/Scripts/searchsuggestions.js"></script>
 
-        <body style="background-color: #4e4e4e; font-family: Arial;">
+        <body>
         <div style="width: 97%; margin-left: auto; margin-right: auto; background-color: #d5d5d5;  border-left: 1px solid black; border-right: 1px solid black;">
           <div id="header" style="height: 117px; background-image: url('/Images/headerimg.png');background-repeat: repeat-x; padding-left: 15px;">
             <div style="float: right; margin-right: 15px; margin-top: 15px; height: 20px;">

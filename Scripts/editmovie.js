@@ -10,26 +10,97 @@ function addListItem(itemchild)
 	var node = $(itemchild.parentNode).clone();
 	node.children("a").html("x").attr('onclick', 'rmListItem(this)');
 	$(list).append(node);
-		//'<li><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input type="text" value="' + $(itemchild.parentNode).children("input").val()  + '" /><a href="#" onclick="rmListItem(this)">x</a></li>')
 	$(itemchild.parentNode).children("input").val('')
 }
-var xmldoc;
 
 function saveMovieInfo()
 {
+	var movieid = window.location.pathname.split( '/' )[2];
 	
+	var Genres = new Array();
+	$('#GenreList').children('li').each(function (i) {
+		Genres[i] = $(this).children('input').val()
+	})
+	
+	var Persons = new Array();
+	var personindex = 0;
+	$('#CrewList').children('li').each(function (i) {
+		Persons[i] = {
+			'Name' : $(this).children('#crewname').val(),
+			'Type' : $(this).children('#crewjob').val(),
+			'Role' : ""
+		}
+		personindex++;
+	})
+	$('#ActorList').children('li').each(function (i) {
+		Persons[personindex + i] = {
+			'Name' : $(this).children('#castname').val(),
+			'Type' : "Actor",
+			'Role' : $(this).children('#castrole').val()
+		}
+	})
+	
+	
+	var Studios = new Array();
+	$('#StudioList').children('li').each(function (i) {
+		Studios[i] = $(this).children('input').val()
+	})
+	
+
+	
+	var movieJSON = {
+		'LocalTitle' : $('#LocalTitle').val(),
+		'OriginalTitle' : $('#OriginalTitle').val(),
+		'SortTitle' : $('#SortTitle').val(),
+		'SortTitle' : $('#SortTitle').val(),
+		'Added' : $('#Added').val(),
+		'ProductionYear' : $('#ProductionYear').val(),
+		'RunningTime' : $('#RunningTime').val(),
+		'IMDBrating' : $('#IMDBrating').text(),
+		'MPAARating' : $('#MPAARating').val(),
+		'IMDBrating' : $('#IMDBrating').text(),
+		'MPAARating' : $('#MPAARating').val(),
+		'Description' : $('#Description').val(),
+		'Type' : $('#Type').val(),
+		'AspectRatio' : $('#AspectRatio').val(),
+		'IMDB' : $('#IMDB').val(),
+		'TMDbId' : $('#TMDbId').val(),
+		'Genres' : Genres,
+		'Persons' : Persons,
+		'Studios' : Studios
+		
+	}
+	
+	var jsdata = JSON.stringify(movieJSON)
+	
+	$.ajax({
+               url: "/saveMovieXML/" + movieid,
+               type: "POST",
+               contentType: "application/json",
+               processData: false,
+               data: jsdata,
+               //success: alert(movieJSON['TMDbId'])
+            }); 
 }
 
 function editMovieInfo()
 {
-	//var div = document.getElementById("movieinfo");
+	$("#editbutton").html("[save]").attr('onclick', 'saveMovieInfo()');
+	
 	var movieid = window.location.pathname.split( '/' )[2];
 	$.ajax({
 		url: '/getMovieXML',
 		data: "movieID=" + movieid,
 		dataType: 'xml',
-		success: function(data) {
-			xmldoc = data;
+		success: function(data){
+			loadEditsFromXML(data);
+		}
+	});
+}
+
+function loadEditsFromXML(data)
+{
+			//xmldoc = data;
 			var option = $(data).find('MPAARating').text();
 			$('#spMPAARating').html('<br /><input id="MPAARating" value="' + option + '" />');
 			var MPAARatings = ["G", "PG", "PG-13", "R", "NC-17", "NR"]
@@ -138,17 +209,17 @@ function editMovieInfo()
 			option = $(data).find('ProductionYear').text();
 			div.append('<b>Production Year:</b> <br /><input id="ProductionYear" value="' + option + '" /><br />')
 			option = $(data).find('IMDBrating').text();
-			$('#movierating').html('<b>Movie Rating:</b> <br /><span id="IMDBRating"></span><div style="width: 250px;" id="RatingSlider"><div>')
+			$('#movierating').html('<b>Movie Rating:</b> <br /><span id="IMDBrating"></span><div style="width: 250px;" id="RatingSlider"><div>')
 			$( "#RatingSlider" ).slider({
 				value: option,
 				min: 0,
 				max: 10,
 				step: 0.1,
 				slide: function( event, ui ) {
-					$( "#IMDBRating" ).text(ui.value);
+					$( "#IMDBrating" ).text(ui.value);
 				}
 			});
-			$( "#IMDBRating" ).text( $( "#RatingSlider" ).slider( "value" ) );
+			$( "#IMDBrating" ).text( $( "#RatingSlider" ).slider( "value" ) );
 			
 			option = $(data).find('Description').text();
 			$('#moviedescription').html('<textarea id="Description" style="width: 100%;  height: 100px;">' + option  + '</textarea>')
@@ -161,7 +232,7 @@ function editMovieInfo()
 					crewlist.append('<li><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input id="crewname" type="text" value="' + option.eq(i).children('Name').text() + '" /> as: <input id="crewjob" type="text" value="' + option.eq(i).children('Type').text() +'" /><a href="#" onclick="rmListItem(this)">x</a></li>');					
 				}
 			}
-			$('#moviecrew').html('<ul class="sortablelist"><li id="newCrew"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input id="crewname" type="text" placeholder="Name" /> as: <input id="crewjob" type="text" placeholder="Job" /><a href="#" onclick="addListItem(this)">+</a></li></ul>')
+			$('#moviecrew').html('<ul class="sortablelist"><li id="newCrew"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input id="crewname" type="text" placeholder="Crew Name" /> as: <input id="crewjob" type="text" placeholder="Job" /><a href="#" onclick="addListItem(this)">+</a></li></ul>')
 			crewlist.appendTo('#moviecrew');
 			$( "#newCrew" ).draggable({
 				connectToSortable: "#CrewList",
@@ -181,7 +252,7 @@ function editMovieInfo()
 					castlist.append('<li><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input id="castname" type="text" value="' + option.eq(i).children('Name').text() + '" /> as: <input id="castrole" type="text" value="' + option.eq(i).children('Role').text() +'" /><a href="#" onclick="rmListItem(this)">x</a></li>');					
 				}
 			}
-			$('#moviecast').html('<ul class="sortablelist"><li id="newCast"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input id="castname" type="text" placeholder="Actor" /> as: <input id="castrole" type="text" placeholder="Role" /><a href="#" onclick="addListItem(this)">+</a></li></ul>')
+			$('#moviecast').html('<ul class="sortablelist"><li id="newCast"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input id="castname" type="text" placeholder="Actor Name" /> as: <input id="castrole" type="text" placeholder="Role" /><a href="#" onclick="addListItem(this)">+</a></li></ul>')
 			castlist.appendTo('#moviecast');
 			$( "#newCast" ).draggable({
 				connectToSortable: "#ActorList",
@@ -194,5 +265,3 @@ function editMovieInfo()
 			});
 		
 		}
-	});
-}

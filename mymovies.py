@@ -1,4 +1,4 @@
-import os, xml.etree.ElementTree as ET, re
+import os, lxml.etree as ET, re
 
 def scandirectory(self, path):
     moviedirectories = []
@@ -19,21 +19,23 @@ def scandirectory(self, path):
     
     for di in moviedirectories:
         
-        try:
-            mymovie = MyMovie(os.path.join(path, di, "mymovies.xml"))
-            HasXML = True
-            Actors = [person.Name.strip().lower() for person in mymovie.Persons]
-            movie = movies(mymovie.SortTitle, mymovie.LocalTitle, mymovie.ProductionYear, os.path.join(path, di), HasXML, mymovie.XMLComplete, mymovie.Genres,Actors, mymovie.IMDBrating)
-        except Exception as inst:
-            print inst
+ 
+        mymovie = MyMovie(os.path.join(path, di, "mymovies.xml"))
+        Actors = [person.Name.strip().lower() for person in mymovie.Persons]
+        if not mymovie.HasXML:
             self.unprocessedcount += 1
-            HasXML = False
-            year = re.search("\([0-9]*\)", di)
-            year = year.group(0).replace("(", "")
-            year = year.replace(")", "")
-            di = re.sub("\(.*\)", "", di).strip()
-            di = re.sub("\[.*\]", "", di).strip()
-            movie = movies(di, di, year, os.path.join(path, di), HasXML, False, [],[], "0.0")
+        movie = movies(mymovie.SortTitle, mymovie.LocalTitle, mymovie.ProductionYear, os.path.join(path, di), mymovie.HasXML, mymovie.XMLComplete, mymovie.Genres,Actors, mymovie.IMDBrating)
+
+
+#            print inst
+#            self.unprocessedcount += 1
+#            HasXML = False
+#            year = re.search("\([0-9]*\)", di)
+#            year = year.group(0).replace("(", "")
+#            year = year.replace(")", "")
+#            di = re.sub("\(.*\)", "", di).strip()
+#            di = re.sub("\[.*\]", "", di).strip()
+#            movie = movies(di, di, year, os.path.join(path, di), HasXML, False, [],[], "0.0")
           
         self.moviesdb.append(movie)  
     
@@ -114,7 +116,7 @@ class movies:
     def Actors(self, value):
         self._Actors = value
     
-class MyMovie:
+class MyMovie(object):
     class Person:
         def __init__(self, Name, Type, Role):
             self._Name = Name
@@ -135,11 +137,27 @@ class MyMovie:
     
     dom = None
     XMLpath = ""
-    def __init__(self, Path, new=False, name="",year=""):
-        if not new:
+    _HasXML = False
+    
+    @property
+    def HasXML(self):
+        return self._HasXML
+    
+    def __init__(self, Path):
+        try:
             xml = open(Path)
-            self.dom = ET.parse(xml)
-        else:
+            self._HasXML = True
+            parser = ET.XMLParser(remove_blank_text=True)
+            self.dom = ET.parse(xml, parser).getroot()
+        except IOError:
+            self._HasXML = False
+            di = os.path.split(os.path.dirname(Path))[1]
+            print di
+            year = re.search("\([0-9]*\)", di)
+            year = year.group(0).replace("(", "")
+            year = year.replace(")", "")
+            name = re.sub("\(.*\)", "", di).strip()
+            name = re.sub("\[.*\]", "", name).strip()
             root = ET.Element("Title")
             ET.SubElement(root, 'LocalTitle').text = name
             ET.SubElement(root, 'SortTitle').text = name
@@ -151,6 +169,7 @@ class MyMovie:
             ET.SubElement(root, 'MPAARating')
             ET.SubElement(root, 'Description')
             ET.SubElement(root, 'Type')
+            ET.SubElement(root, 'AspectRatio')
             ET.SubElement(root, 'LockData')
             ET.SubElement(root, 'IMDB')
             ET.SubElement(root, 'TMDbId')
@@ -164,8 +183,10 @@ class MyMovie:
             s = ET.SubElement(root, 'Studios')
             ET.SubElement(s, 'Studio')
             self.dom = root
+            
         self.XMLpath = Path
         #print tree.find('LocalTitle').text
+        
         
     @property
     def LocalTitle(self):
@@ -317,7 +338,13 @@ class MyMovie:
         for g in elements:
             genres.append(g.text)
         
-        return genres
+        return genres   
+    @Genres.setter
+    def Genres(self, value):
+        g = self.dom.find('Genres')
+        g.clear()
+        for Genre in value:
+            ET.SubElement(g, 'Genre').text = Genre
     
     @property
     def Studios(self):
@@ -326,7 +353,13 @@ class MyMovie:
         for s in elements:
             studios.append(s.text)
         
-        return studios
+        return studios       
+    @Studios.setter
+    def Studios(self, value): 
+        s = self.dom.find('Studios')
+        s.clear()
+        for Studio in value:
+            ET.SubElement(s, 'Studio').text = Studio
     
     @property
     def Persons (self):
@@ -345,7 +378,16 @@ class MyMovie:
                     
             person = self.Person(name, type, role)
             persons.append(person)
-        return persons
+        return persons   
+    @Persons.setter
+    def Persons(self, value):
+        ps = self.dom.find('Persons')
+        ps.clear()
+        for Person in value:
+            p = ET.SubElement(ps, 'Person')
+            ET.SubElement(p, 'Name').text = Person['Name']
+            ET.SubElement(p, 'Type').text = Person['Type']
+            ET.SubElement(p, 'Role').text = Person['Role']
      
         
     @property
@@ -369,4 +411,30 @@ class MyMovie:
             return True
         else:
             return False
+    
+    def save(self):
+        try:
+            xml = open(self.XMLpath, "r+")
+        except IOError:
+            xml = open(self.XMLpath, "w")
+        xml.write(ET.tostring(self.dom, pretty_print=True))
+        xml.close()
+        
+    def loadFromDictionary(self, dict):
+        self.LocalTitle = dict['LocalTitle']
+        self.SortTitle = dict['SortTitle']
+        self.OriginalTitle = dict['OriginalTitle']
+        self.ProductionYear = dict['ProductionYear']
+        self.Added = dict['Added']
+        self.RunningTime = dict['RunningTime']
+        self.IMDBrating = dict['IMDBrating']
+        self.MPAARating = dict['MPAARating']
+        self.Description = dict['Description']
+        self.Type = dict['Type']
+        self.AspectRatio = dict['AspectRatio']
+        self.IMDB = dict['IMDB']
+        self.TMDbId = dict['TMDbId']
+        self.Genres = dict['Genres']
+        self.Persons = dict['Persons']
+        self.Studios = dict['Studios']
     

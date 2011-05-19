@@ -1,4 +1,5 @@
-import cherrypy, xml.etree.ElementTree as ET
+import cherrypy #, xml.etree.ElementTree as ET
+import lxml.etree as ET
 from cherrypy.lib.static import serve_file
 from PIL import Image
 import mymovies, sys, os, ConfigParser, urllib2, json, re
@@ -215,7 +216,7 @@ class MainProgram:
             else:
                 
                 return serve_file(os.path.join(os.getcwd(), "Images", "noposter.png"), content_type='image/png')
-        if filename == "backdrop.jpg":
+        elif filename == "backdrop.jpg":
             if os.path.isfile(os.path.join(self.moviesdb[int(movieid)].Dir, filename)):
                 img = Image.open(os.path.join(self.moviesdb[int(movieid)].Dir, filename))
                 response.headers['Content-Type'] = 'image/jpg'
@@ -224,19 +225,15 @@ class MainProgram:
                 #return serve_file(os.path.join(self.moviesdb[int(movieid)].Dir, filename), content_type='image/jpg')
             else:
                 return serve_file(os.path.join(os.getcwd(), "Images", "nobackdrop.png"), content_type='image/png')
+        elif filename == "nfo":
+            pass
         
-        if self.moviesdb[int(movieid)].HasXML:
-            movie = open(os.path.join(self.moviesdb[int(movieid)].Dir, "mymovies.xml"))
-            domroot = ET.parse(movie).getroot()
-            ET.SubElement(domroot, 'unprocessed').text = str(self.unprocessedcount)
-            ET.SubElement(domroot, 'movieID').text = self.moviesdb[int(movieid)].ID
-            output = '<?xml-stylesheet type="text/xsl" href="/Templates/moviepage.xsl"?>\n' + ET.tostring(domroot)
-        else:
-            movie = mymovies.MyMovie(os.path.join(self.moviesdb[int(movieid)].Dir, "mymovies.xml"), True, self.moviesdb[int(movieid)].LocalTitle, self.moviesdb[int(movieid)].ProductionYear)
-            ET.SubElement(movie.dom, 'movieID').text = self.moviesdb[int(movieid)].ID
-            ET.SubElement(movie.dom, 'unprocessed').text = str(self.unprocessedcount)
-            output = '<?xml-stylesheet type="text/xsl" href="/Templates/moviepage.xsl"?>\n' + ET.tostring(movie.dom)
-        response.headers['Content-Type'] = 'text/xml'
+        #if self.moviesdb[int(movieid)].HasXML:
+        movie = mymovies.MyMovie(os.path.join(self.moviesdb[int(movieid)].Dir, "mymovies.xml"))
+        ET.SubElement(movie.dom, 'unprocessed').text = str(self.unprocessedcount)
+        ET.SubElement(movie.dom, 'movieID').text = self.moviesdb[int(movieid)].ID
+        transform = ET.XSLT(ET.XML(open('Templates/moviepage.xsl').read()))
+        output = str(transform(movie.dom))
         return output  
 
     movie.exposed = True
@@ -253,18 +250,36 @@ class MainProgram:
         return self.unprocessed_movies()
     index.exposed = True
     
-    def saveMovieXML(self, movieID, XML):
-        #Saves an edit form back to the mymovies.xml
-        #the form is returned back as XML ie <LocalTitle>something</LocalTitle>
-        #multiple XML XMLNodes could be returned in the vlaue
+    def saveMovieXML(self, movieID):
+        #Saves an edit page back to the mymovies.xml
+        #the form is returned back as JSON with properties of every mymovies element.
+        jsonBody = cherrypy.request.body.read()
+        #TODO - Fix this remote IP
+        if cherrypy.request.remote.ip == "192.168.1.100":
+            mm = mymovies.MyMovie(os.path.join(self.moviesdb[int(movieID)].Dir, "mymovies.xml"))
+            mm.loadFromDictionary(json.loads(jsonBody))
+            #mm.save() #disabled for testing purposes
+        else:
+            cherrypy.response.status = 403
+            return ""
+        #print 
+        #root = ET.fromstring(xmlBody)
+        
+        
         pass
     saveMovieXML.exposed = True
     
     def getMovieXML(self, movieID):
         #Returns pure XML copies of the requested xml element
         #Can return the full children of an XML element
-        return serve_file(os.path.join(self.moviesdb[int(movieID)].Dir, "mymovies.xml"), content_type='text/xml')
-        pass
+        try: 
+            open(os.path.join(self.moviesdb[int(movieID)].Dir, "mymovies.xml"))
+            return serve_file(os.path.join(self.moviesdb[int(movieID)].Dir, "mymovies.xml"), content_type='text/xml')
+        except:
+            movie = mymovies.MyMovie(os.path.join(self.moviesdb[int(movieID)].Dir, "mymovies.xml"))
+            response = cherrypy.response
+            response.headers['Content-Type'] = 'text/xml'
+            return ET.tostring(movie.dom)
     getMovieXML.exposed = True
     
     def exit(self):

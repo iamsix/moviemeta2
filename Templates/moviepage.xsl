@@ -7,19 +7,21 @@
         <meta http-equiv="X-UA-Compatible" content="IE=8" />
         <title>Movie &lt;meta&gt;</title>
       </head>
-
-	  <script type="text/javascript" src="/Scripts/searchsuggestions.js" />
-      <script type="text/javascript" src="/Scripts/jquery-1.6.js" />
-      <script type="text/javascript" src="/Scripts/jquery-ui-1.8.12.custom.min.js" />
-      <script type="text/javascript" src="/Scripts/jquery-ui-timepicker-addon.js" />
-      <script type="text/javascript" src="/Scripts/editmovie.js" />
+      
+	  <script type="text/javascript" src="/Scripts/searchsuggestions.js"> </script>
+      <script type="text/javascript" src="/Scripts/jquery-1.6.js"> </script>
+      <script type="text/javascript" src="/Scripts/jquery-ui-1.8.12.custom.min.js"> </script>
+      <script type="text/javascript" src="/Scripts/jquery-ui-timepicker-addon.js"> </script> 
+      <script type="text/javascript" src="/Scripts/editmovie.js"> </script>
       
       <style type="text/css">
+      	body {background: #232323 url('/Images/bg-gradient.png') repeat-x; font-family: Arial}
         a.header{color: #DDD; font-weight: bold; }
         a{color: #4e5785;}
         a.movieXMLcomplete{color: green;}
         a.movieXMLnone{color: red;}
         a.movieXMLincomplete{color: #4f61c5;}
+        #cast {font-family: Arial; font-size: 10pt;} 
         #searchbox{padding: 3px 25px 4px 10px; background:transparent url('/Images/searchbox.png') 0 -24px no-repeat; width: 280px;}
         td.castpic{padding: 2px 5px 2px 5px}
         td.person{padding: 5px 60px 0px 30px}
@@ -38,13 +40,13 @@
 		@import "/Templates/jquery-ui-1.8.12.custom.css";
 	  </style>
       
-      <body style="background-color: #4e4e4e; font-family: Arial; height: 100%;">
+      <body>
         <div style="width: 97%; padding-bottom: 25px; margin-left: auto; margin-right: auto; background-color: #d5d5d5; border-left: 1px solid black; border-right: 1px solid black; overflow: auto;">
           <div id="header" style="height: 117px; background-image: url('/Images/headerimg.png');background-repeat: repeat-x; padding-left: 15px;">
             <div style="float: right; margin-right: 15px; margin-top: 15px; height: 20px; ">
               <form action="/search" method="get">
                 <span id="searchbox">
-                  <input type="text" onblur='hideSuggestions()' onkeypress="return keypress(event.keyCode)" onkeyup="searchsuggestion(this, event.keyCode)" placeholder="Search" name="search" style="background: transparent; border: none;font-weight: bold; color: #555; width: 225px;"/>
+                  <input type="text" autocomplete="off" onblur='hideSuggestions()' onkeydown="return keypress(event.keyCode)" onkeyup="searchsuggestion(this, event.keyCode)" placeholder="Search" name="search" style="background: transparent; border: none;font-weight: bold; color: #555; width: 225px;"/>
                 </span>
                 <br />
                 <div id="searchsuggestions"></div>
@@ -66,13 +68,13 @@
               </span>
             </div>
           </div>
-          <div id="content" style="padding: 15px 20px 15px 20px; height: 100%;">
+          <div id="content" style="padding: 15px 20px 15px 20px;">
             <div id="lefcol" style="width: 210px; float:left;overflow: auto; font-size: 10pt; padding-bottom: 15px; padding-right: 20px;">
              
               <b>Poster</b><br/>
               <img src="/movie/{Title/movieID}/folder.jpg" style="margin-top: 10px; width: 180px"/>
               <br/><br/>
-	          <span style="font-size: 12pt; font-weight: bold;">Movie Info </span> <a href="#" onclick="editMovieInfo()">[edit]</a><br/>
+	          <span style="font-size: 12pt; font-weight: bold;">Movie Info </span> <a id="editbutton" href="#" onclick="editMovieInfo()">[edit]</a><br/>
 	          <div id="movieinfo">
 	              <b>Content Rating: </b> <span id="spMPAARating"><xsl:value-of select="Title/MPAARating"/></span><br/>
 	              <b>Runtime: </b> <span id="spRunningTime"><xsl:value-of select="Title/RunningTime"/></span><br/>
@@ -103,7 +105,7 @@
               
               
             </div>
-            <div id="rightcol" style="height: 100%; font-size: 10pt; overflow: auto; padding-right: 10px;">
+            <div id="rightcol" style="font-size: 10pt; overflow: auto; padding-right: 10px;">
             	<img src="/movie/{Title/movieID}/backdrop.jpg" style="Height: 250px; padding-top: 10px; float: right;"/>
               <span id="titles">
 	              <span id="movietitle" style="font-weight: bold; font-size: 20pt;">
