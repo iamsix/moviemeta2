@@ -1,41 +1,44 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+  <xsl:output method="html" doctype-public="" />
   <xsl:template match="/">
-    <html>
+    <html >
+    	
       <head>
-        <meta http-equiv="X-UA-Compatible" content="IE=8" />
-        <title>Movie &lt;meta&gt;</title>
+	      <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	      <title>Movie &lt;meta&gt;</title>
+		  <style type="text/css">
+		  	body {background: #232323 url('/Images/bg-gradient.png') repeat-x; font-family: Arial}
+		    a{color: #4f61c5;}
+		    a.header{color: #DDD; font-weight: bold; font-size: 10pt; }
+		    a.movieXMLcomplete{color: green;}
+		    a.movieXMLnone{color: red;}
+		    a.movieXMLincomplete{color: #4f61c5;}
+		    #searchbox{padding: 3px 25px 4px 10px; background:transparent url('/Images/searchbox.png') 0 -24px no-repeat; width: 280px;}
+		    #invaliddir{margin-left: 40px; width: 180px; background: pink;}
+		    #searchsuggestions{visibility: hidden; box-shadow: 0px 0px 8px #000; border-bottom-left-radius: 5px; border-bottom-right-radius: 5px; border: 1px solid #4e4e4e; padding-left: 5px; padding-right: 5px; padding-bottom: 5px; position: absolute; margin-left: 10px; background-color: #d5d5d5; min-width: 220px;}
+		  </style>
+		
+		  <script type="text/javascript">
+		    function refreshlist()
+		    {
+		    req = new XMLHttpRequest();
+		    req.open("GET","/refresh_movielist",true);
+		    req.setRequestHeader("Content-type","text/plain");
+		    req.send();
+		
+		    req.onreadystatechange=function() {
+		    if (req.readyState==4) {
+		    location.reload(true);
+		    };
+		    };
+		    }
+		  </script>
+		  <script type="text/javascript" src="/Scripts/searchsuggestions.js"></script>
+        
       </head>
-      <style type="text/css">
-      	body {background: #232323 url('/Images/bg-gradient.png') repeat-x; font-family: Arial}
-        a{color: #4f61c5;}
-        a.header{color: #DDD; font-weight: bold; }
-        a.movieXMLcomplete{color: green;}
-        a.movieXMLnone{color: red;}
-        a.movieXMLincomplete{color: #4f61c5;}
-        #searchbox{padding: 3px 25px 4px 10px; background:transparent url('/Images/searchbox.png') 0 -24px no-repeat; width: 280px;}
-        #invaliddir{margin-left: 40px; width: 180px; background: pink;}
-        #searchsuggestions{visibility: hidden; box-shadow: 0px 0px 8px #000; border-bottom-left-radius: 5px; border-bottom-right-radius: 5px; border: 1px solid #4e4e4e; padding-left: 5px; padding-right: 5px; padding-bottom: 5px; position: absolute; margin-left: 10px; background-color: #d5d5d5; min-width: 220px;}
-      </style>
 
-      <script type="text/javascript">
-        function refreshlist()
-        {
-        req = new XMLHttpRequest();
-        req.open("GET","/refresh_movielist",true);
-        req.setRequestHeader("Content-type","text/plain");
-        req.send();
-
-        req.onreadystatechange=function() {
-        if (req.readyState==4) {
-        location.reload(true);
-        };
-        };
-        }
-      </script>
-      <script type="text/javascript" src="/Scripts/searchsuggestions.js"></script>
-
-        <body>
+      <body>
         <div style="width: 97%; margin-left: auto; margin-right: auto; background-color: #d5d5d5;  border-left: 1px solid black; border-right: 1px solid black;">
           <div id="header" style="height: 117px; background-image: url('/Images/headerimg.png');background-repeat: repeat-x; padding-left: 15px;">
             <div style="float: right; margin-right: 15px; margin-top: 15px; height: 20px;">
@@ -50,7 +53,7 @@
                 </span>
               </form>
             </div>
-            <img src="/Images/logo.png" style="margin-top: 10px; " />
+            <img src="/Images/logo.png" alt="Movie Meta Logo" style="margin-top: 10px; " />
             <div id ="menu" style="margin-top: 14px; color: #DDD; font-size: 10pt; ">
               <span>
                 <a class="header" href="/list" style="padding-right: 15px; ">Movie List</a>

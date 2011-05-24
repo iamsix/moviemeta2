@@ -24,23 +24,13 @@ def scandirectory(self, path):
         Actors = [person.Name.strip().lower() for person in mymovie.Persons]
         if not mymovie.HasXML:
             self.unprocessedcount += 1
-        movie = movies(mymovie.SortTitle, mymovie.LocalTitle, mymovie.ProductionYear, os.path.join(path, di), mymovie.HasXML, mymovie.XMLComplete, mymovie.Genres,Actors, mymovie.IMDBrating)
-
-
-#            print inst
-#            self.unprocessedcount += 1
-#            HasXML = False
-#            year = re.search("\([0-9]*\)", di)
-#            year = year.group(0).replace("(", "")
-#            year = year.replace(")", "")
-#            di = re.sub("\(.*\)", "", di).strip()
-#            di = re.sub("\[.*\]", "", di).strip()
-#            movie = movies(di, di, year, os.path.join(path, di), HasXML, False, [],[], "0.0")
+        key = hex(hash(os.path.join(path, di)) & 0xffffffff)[2:10]
+        movie = movies(key, mymovie.SortTitle, mymovie.LocalTitle, mymovie.ProductionYear, os.path.join(path, di), mymovie.HasXML, mymovie.XMLComplete, mymovie.Genres,Actors, mymovie.IMDBrating, mymovie.Added)
           
         self.moviesdb.append(movie)  
     
 class movies:
-    def __init__(self, SortTitle, LocalTitle, ProductionYear, Dir, HasXML, XMLComplete, Genres, Actors, IMDBRating):
+    def __init__(self, ID, SortTitle, LocalTitle, ProductionYear, Dir, HasXML, XMLComplete, Genres, Actors, IMDBRating, DateAdded):
         self._SortTitle = SortTitle
         self._LocalTitle = LocalTitle
         self._ProductionYear = ProductionYear
@@ -50,6 +40,8 @@ class movies:
         self._Genres = Genres
         self._Actors = Actors
         self._IMDBRating = IMDBRating
+        self._DateAdded = DateAdded
+        self._ID = ID
     
     def __getitem__(self, key):
         if key == "SortTitle": return self._SortTitle.lower()
@@ -413,10 +405,10 @@ class MyMovie(object):
             return False
     
     def save(self):
-        try:
-            xml = open(self.XMLpath, "r+")
-        except IOError:
-            xml = open(self.XMLpath, "w")
+        print self.XMLpath
+        #Open in r+ and truncate() instead of 'w' because 'w' will raise an IOError on a hidden file
+        xml = open(self.XMLpath, "r+")
+        xml.truncate()
         xml.write(ET.tostring(self.dom, pretty_print=True))
         xml.close()
         

@@ -1,4 +1,6 @@
-import cherrypy #, xml.etree.ElementTree as ET
+#! /usr/bin/env python
+
+import cherrypy, imp
 import lxml.etree as ET
 from cherrypy.lib.static import serve_file
 from PIL import Image
@@ -13,7 +15,7 @@ class MainProgram:
     def __init__(self):
         cherrypy.config.update({'error_page.404': self.error_page_404})
         self.config = ConfigParser.ConfigParser()
-        
+
         try:
             cfgfile = open("main.conf")
             self.config.readfp(cfgfile)
@@ -23,6 +25,27 @@ class MainProgram:
             self.config.set("general", "FileExtensions", "avi,mkv,mp4,ts")
             self.config.write(open("main.conf", "w"))
         
+        filenames = []
+        for fn in os.listdir('./fetchmodules'):
+            if fn.endswith('.py') and not fn.startswith('_'):
+                filenames.append(os.path.join('./fetchmodules', fn))
+        
+        self.fetchers = {}
+        self.moviesearchers = {}
+        self.moviedatafetchers = {}
+               
+        for filename in filenames:
+            name = os.path.basename(filename)[:-3]
+            try:
+                module = imp.load_source(name, filename)
+            except Exception as inst: 
+                print "Error loading module " + name + " : " + str(inst)
+            else:
+                self.fetchers[module.fetcher.datasource] = module.fetcher
+                for name, func in vars(module.fetcher).iteritems():
+                    if hasattr(func, 'searchkw'):
+                        searchkw = str(func.searchkw)
+                        self.moviesearchers[searchkw] = func
         
         self.refresh_movielist()
 
@@ -34,8 +57,8 @@ class MainProgram:
         for dir in [d.strip() for d in self.config.get("general","Directories").split(",")]:
             if dir: mymovies.scandirectory(self, dir)
         self.moviesdb.sort(key=itemgetter("SortTitle"))
-        for movie in self.moviesdb:
-            movie.ID = str(self.moviesdb.index(movie))
+#        for movie in self.moviesdb:
+#            movie.ID = str(self.moviesdb.index(movie))
     refresh_movielist.exposed = True
     
     def unprocessed_movies(self): 
@@ -52,8 +75,11 @@ class MainProgram:
                 ET.SubElement(movietag, 'Link').text = movie.ID
         ET.SubElement(root, 'unprocessed').text = str(self.unprocessedcount)
         ET.SubElement(root, 'listname').text = "Unprocessed Movies (%s)" % moviecount
-        output = '<?xml-stylesheet type="text/xsl" href="Templates/index.xsl"?>' + ET.tostring(root)
-        return output
+        
+        transform = ET.XSLT(ET.XML(open('Templates/index.xsl').read()))
+        editcontrols = (cherrypy.request.remote.ip == "192.168.1.100")
+        doc = transform(root, EditControls="'%s'" % editcontrols)
+        return str(doc)
     
     def movie_list(self):
         root = ET.Element("movies")
@@ -76,12 +102,12 @@ class MainProgram:
             
         ET.SubElement(root, 'listname').text = "Movie List (%s)" % moviecount
         #indent(root)
-        output = '<?xml-stylesheet type="text/xsl" href="/Templates/index.xsl"?>\n' + ET.tostring(root)
-        return output
+        transform = ET.XSLT(ET.XML(open('Templates/index.xsl').read()))
+        editcontrols = (cherrypy.request.remote.ip == "192.168.1.100")
+        doc = transform(root, EditControls="'%s'" % editcontrols)
+        return str(doc)
     
     def list(self):
-        response = cherrypy.response
-        response.headers['Content-Type'] = 'text/xml'
         return self.movie_list()
     list.exposed = True
     
@@ -205,36 +231,44 @@ class MainProgram:
     searchsuggestions.exposed = True
     
     def movie(self, movieid, filename=None):
+        dbmovie = None 
+        for m in self.moviesdb:
+            if m.ID == movieid: dbmovie = m
         response = cherrypy.response
-        if filename == "folder.jpg":
-            if os.path.isfile(os.path.join(self.moviesdb[int(movieid)].Dir, filename)):
-                img = Image.open(os.path.join(self.moviesdb[int(movieid)].Dir, filename))
-                response.headers['Content-Type'] = 'image/jpg'
-                img.thumbnail((180,270), Image.ANTIALIAS)
-                return img.tostring('jpeg','RGB')
-                #return serve_file(os.path.join(self.moviesdb[int(movieid)].Dir, filename), content_type='image/jpg')
-            else:
-                
-                return serve_file(os.path.join(os.getcwd(), "Images", "noposter.png"), content_type='image/png')
-        elif filename == "backdrop.jpg":
-            if os.path.isfile(os.path.join(self.moviesdb[int(movieid)].Dir, filename)):
-                img = Image.open(os.path.join(self.moviesdb[int(movieid)].Dir, filename))
-                response.headers['Content-Type'] = 'image/jpg'
-                img.thumbnail((450,250), Image.ANTIALIAS)
-                return img.tostring('jpeg','RGB')
-                #return serve_file(os.path.join(self.moviesdb[int(movieid)].Dir, filename), content_type='image/jpg')
-            else:
-                return serve_file(os.path.join(os.getcwd(), "Images", "nobackdrop.png"), content_type='image/png')
-        elif filename == "nfo":
+        if dbmovie:
+            if filename == "folder.jpg":
+                if os.path.isfile(os.path.join(dbmovie.Dir, filename)):
+                    img = Image.open(os.path.join(dbmovie.Dir, filename))
+                    response.headers['Content-Type'] = 'image/jpg'
+                    img.thumbnail((180,270), Image.ANTIALIAS)
+                    return img.tostring('jpeg','RGB')
+                    #return serve_file(os.path.join(self.moviesdb[int(movieid)].Dir, filename), content_type='image/jpg')
+                else:
+                    
+                    return serve_file(os.path.join(os.getcwd(), "Images", "noposter.png"), content_type='image/png')
+            elif filename == "backdrop.jpg":
+                if os.path.isfile(os.path.join(dbmovie.Dir, filename)):
+                    img = Image.open(os.path.join(dbmovie.Dir, filename))
+                    response.headers['Content-Type'] = 'image/jpg'
+                    img.thumbnail((450,250), Image.ANTIALIAS)
+                    return img.tostring('jpeg','RGB')
+                    #return serve_file(os.path.join(self.moviesdb[int(movieid)].Dir, filename), content_type='image/jpg')
+                else:
+                    return serve_file(os.path.join(os.getcwd(), "Images", "nobackdrop.png"), content_type='image/png')
+            elif filename == "nfo":
+                pass
+            
+            #if self.moviesdb[int(movieid)].HasXML:
+            movie = mymovies.MyMovie(os.path.join(dbmovie.Dir, "mymovies.xml"))
+            ET.SubElement(movie.dom, 'unprocessed').text = str(self.unprocessedcount)
+            ET.SubElement(movie.dom, 'movieID').text = dbmovie.ID
+            transform = ET.XSLT(ET.XML(open('Templates/moviepage.xsl').read()))
+            editcontrols = (cherrypy.request.remote.ip == "192.168.1.100")
+            doc = transform(movie.dom, EditControls="'%s'" % editcontrols)
+    
+            return str(doc)
+        else:
             pass
-        
-        #if self.moviesdb[int(movieid)].HasXML:
-        movie = mymovies.MyMovie(os.path.join(self.moviesdb[int(movieid)].Dir, "mymovies.xml"))
-        ET.SubElement(movie.dom, 'unprocessed').text = str(self.unprocessedcount)
-        ET.SubElement(movie.dom, 'movieID').text = self.moviesdb[int(movieid)].ID
-        transform = ET.XSLT(ET.XML(open('Templates/moviepage.xsl').read()))
-        output = str(transform(movie.dom))
-        return output  
 
     movie.exposed = True
     
@@ -245,23 +279,23 @@ class MainProgram:
             return "%s\n%s\n%s\n" % (status, message, traceback)
     
     def index(self): 
-        response = cherrypy.response
-        response.headers['Content-Type'] = 'text/xml'
         return self.unprocessed_movies()
     index.exposed = True
     
     def saveMovieXML(self, movieID):
         #Saves an edit page back to the mymovies.xml
         #the form is returned back as JSON with properties of every mymovies element.
+        for m in self.moviesdb:
+            if m.ID == movieID: dbmovie = m
         jsonBody = cherrypy.request.body.read()
         #TODO - Fix this remote IP
         if cherrypy.request.remote.ip == "192.168.1.100":
-            mm = mymovies.MyMovie(os.path.join(self.moviesdb[int(movieID)].Dir, "mymovies.xml"))
+            mm = mymovies.MyMovie(os.path.join(dbmovie.Dir, "mymovies.xml"))
             mm.loadFromDictionary(json.loads(jsonBody))
-            #mm.save() #disabled for testing purposes
+            mm.save() #disabled for testing purposes
         else:
             cherrypy.response.status = 403
-            return ""
+            return "You are not authorized to edit metadata"
         #print 
         #root = ET.fromstring(xmlBody)
         
@@ -272,15 +306,30 @@ class MainProgram:
     def getMovieXML(self, movieID):
         #Returns pure XML copies of the requested xml element
         #Can return the full children of an XML element
-        try: 
-            open(os.path.join(self.moviesdb[int(movieID)].Dir, "mymovies.xml"))
-            return serve_file(os.path.join(self.moviesdb[int(movieID)].Dir, "mymovies.xml"), content_type='text/xml')
-        except:
-            movie = mymovies.MyMovie(os.path.join(self.moviesdb[int(movieID)].Dir, "mymovies.xml"))
-            response = cherrypy.response
-            response.headers['Content-Type'] = 'text/xml'
-            return ET.tostring(movie.dom)
+        for m in self.moviesdb:
+            if m.ID == movieID: dbmovie = m
+
+        if cherrypy.request.remote.ip == "192.168.1.100":
+            try: 
+                open(os.path.join(dbmovie.Dir, "mymovies.xml"))
+                return serve_file(os.path.join(dbmovie.Dir, "mymovies.xml"), content_type='text/xml')
+            except:
+                movie = mymovies.MyMovie(os.path.join(dbmovie.Dir, "mymovies.xml"))
+                response = cherrypy.response
+                response.headers['Content-Type'] = 'text/xml'
+                return ET.tostring(movie.dom)
+        else:
+            cherrypy.response.status = 403
+            return "You are not authorized to edit metadata"
     getMovieXML.exposed = True
+    
+    def fetchmedia(self, movieid, type, identifier):
+        fetcher = self.fetchers['imdb'](identifier)
+        results = fetcher.searchByTitle(identifier)
+        response = cherrypy.response
+        response.headers['Content-Type'] = 'application/json'
+        return json.JSONEncoder().encode(results)
+    fetchmedia.exposed = True
     
     def exit(self):
         sys.exit(0)
@@ -318,6 +367,7 @@ def google_url(searchterm, regexstring):
         return
     except:
         return
+
 
 
 def main():

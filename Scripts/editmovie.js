@@ -1,3 +1,49 @@
+function fetchsearch()
+{
+	var movieid = window.location.pathname.split( '/' )[2];
+	$.ajax({
+               url: "/fetchmedia/" + movieid,
+               type: "POST",
+               contentType: "application/x-www-form-urlencoded",
+               dataType: 'json',
+               data: 'type=search&identifier=' + escape($('#fetchsearchterm').val()),
+               success: function (data) {
+               		$('#fetchsearchresults').html("")
+               		$(data).each(function(i){
+               			$('#fetchsearchresults').append('<li id="' + this.id + '"><b>' + this.name + '</b><br>' + this.desc + '</li>')
+               			
+               		})
+               		
+               		$('#fetchsearchresults').selectable({
+               			stop: function(e, ui) {
+               			  $(".ui-selected:first", this).each(function() {
+		                     $(this).siblings().removeClass("ui-selected");
+              			  });
+               			}
+               			
+               		});
+               		
+               }
+            }); 
+}
+
+function fetchdialog()
+{
+	$('#fetchdialog').dialog({
+			width:440,
+			modal: true,
+			buttons: {
+				"Select Movie": function() {
+					$( this ).dialog( "close" );
+				},
+				Cancel: function() {
+					$( this ).dialog( "close" );
+				}
+			}
+	});
+	fetchsearch()
+}
+
 
 function rmListItem(child)
 {
@@ -79,20 +125,27 @@ function saveMovieInfo()
                contentType: "application/json",
                processData: false,
                data: jsdata,
-               //success: alert(movieJSON['TMDbId'])
+               error: function(jqXHR, textStatus, errorThrown){alert("You are not authorized to edit the metadata")},
+               success: function (data) {
+               		location.reload(true);
+               }
             }); 
 }
 
 function editMovieInfo()
 {
-	$("#editbutton").html("[save]").attr('onclick', 'saveMovieInfo()');
+	
 	
 	var movieid = window.location.pathname.split( '/' )[2];
 	$.ajax({
 		url: '/getMovieXML',
 		data: "movieID=" + movieid,
 		dataType: 'xml',
-		success: function(data){
+		error: function(jqXHR, textStatus, errorThrown){alert("You are not authorized to edit the metadata")},
+		success: function(data, textStatus){
+			$("#editbutton").hide();
+			$("#savebutton").show();
+			$("#canceledit").show()
 			loadEditsFromXML(data);
 		}
 	});
