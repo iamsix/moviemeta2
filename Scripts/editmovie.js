@@ -1,12 +1,14 @@
+var pageeditstate = "display"
+
 function fetchsearch()
 {
 	var movieid = window.location.pathname.split( '/' )[2];
 	$.ajax({
-               url: "/fetchmedia/" + movieid,
+               url: "/fetchmediasearch/" + movieid,
                type: "POST",
                contentType: "application/x-www-form-urlencoded",
                dataType: 'json',
-               data: 'type=search&identifier=' + escape($('#fetchsearchterm').val()),
+               data: 'identifier=' + escape($('#fetchsearchterm').val()),
                success: function (data) {
                		$('#fetchsearchresults').html("")
                		$(data).each(function(i){
@@ -29,20 +31,35 @@ function fetchsearch()
 
 function fetchdialog()
 {
+	var movieid = window.location.pathname.split( '/' )[2];
 	$('#fetchdialog').dialog({
-			width:440,
+			width:500,
 			modal: true,
 			buttons: {
 				"Select Movie": function() {
-					$( this ).dialog( "close" );
+					var checked = ($('#replacemissing:checked').val()  != undefined)
+					$.ajax({
+		               url: "/fetchmetadata/" + movieid,
+		               type: "POST",
+		               contentType: "application/x-www-form-urlencoded",
+		               dataType: 'xml',
+		               data: 'replaceonlymissing=' + checked + '&identifier=' + $('.ui-selected:first').attr("id"),
+		               success: function (data) {
+		               		loadEditsFromXML(data)
+		               		$( '#fetchdialog' ).dialog( "close" );
+		               }
+		            });
+					
 				},
 				Cancel: function() {
+					alert($('#replacemissing:checked').val()  != undefined)
 					$( this ).dialog( "close" );
 				}
 			}
 	});
 	fetchsearch()
 }
+
 
 
 function rmListItem(child)
@@ -127,6 +144,7 @@ function saveMovieInfo()
                data: jsdata,
                error: function(jqXHR, textStatus, errorThrown){alert("You are not authorized to edit the metadata")},
                success: function (data) {
+               		pageeditstate = "display"
                		location.reload(true);
                }
             }); 
@@ -143,16 +161,18 @@ function editMovieInfo()
 		dataType: 'xml',
 		error: function(jqXHR, textStatus, errorThrown){alert("You are not authorized to edit the metadata")},
 		success: function(data, textStatus){
-			$("#editbutton").hide();
-			$("#savebutton").show();
-			$("#canceledit").show()
 			loadEditsFromXML(data);
+			pageeditstate = "editing"
 		}
 	});
 }
 
 function loadEditsFromXML(data)
 {
+	
+			$("#editbutton").hide();
+			$("#savebutton").show();
+			$("#canceledit").show()
 			//xmldoc = data;
 			var option = $(data).find('MPAARating').text();
 			$('#spMPAARating').html('<br /><input id="MPAARating" value="' + option + '" />');

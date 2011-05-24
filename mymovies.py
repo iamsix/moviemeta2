@@ -407,26 +407,60 @@ class MyMovie(object):
     def save(self):
         print self.XMLpath
         #Open in r+ and truncate() instead of 'w' because 'w' will raise an IOError on a hidden file
-        xml = open(self.XMLpath, "r+")
-        xml.truncate()
+        try:
+            xml = open(self.XMLpath, "r+")
+            xml.truncate()
+        except IOError:
+            xml = open(self.XMLpath, "w+")   
         xml.write(ET.tostring(self.dom, pretty_print=True))
         xml.close()
         
-    def loadFromDictionary(self, dict):
-        self.LocalTitle = dict['LocalTitle']
-        self.SortTitle = dict['SortTitle']
-        self.OriginalTitle = dict['OriginalTitle']
-        self.ProductionYear = dict['ProductionYear']
-        self.Added = dict['Added']
-        self.RunningTime = dict['RunningTime']
-        self.IMDBrating = dict['IMDBrating']
-        self.MPAARating = dict['MPAARating']
-        self.Description = dict['Description']
-        self.Type = dict['Type']
-        self.AspectRatio = dict['AspectRatio']
-        self.IMDB = dict['IMDB']
-        self.TMDbId = dict['TMDbId']
-        self.Genres = dict['Genres']
-        self.Persons = dict['Persons']
-        self.Studios = dict['Studios']
+    def loadFromDictionary(self, mmdict, replaceonlymissing = False):
+        if (replaceonlymissing and not self.LocalTitle) or not replaceonlymissing:
+            self.LocalTitle = mmdict['LocalTitle']
+        
+        if (replaceonlymissing and not self.SortTitle) or not replaceonlymissing:
+            self.SortTitle = mmdict['SortTitle']
+        
+        if (replaceonlymissing and not self.OriginalTitle) or not replaceonlymissing:
+            self.OriginalTitle = mmdict['OriginalTitle']
+        
+        if (replaceonlymissing and not self.ProductionYear) or not replaceonlymissing:
+            self.ProductionYear = mmdict['ProductionYear']
+        
+        if (replaceonlymissing and not self.Added) or not replaceonlymissing:
+            self.Added = mmdict['Added']
+            
+        if (replaceonlymissing and not self.RunningTime) or not replaceonlymissing:
+            self.RunningTime = mmdict['RunningTime']
+            
+        if (replaceonlymissing and not self.IMDBrating) or not replaceonlymissing:
+            self.IMDBrating = mmdict['IMDBrating']
+            
+        if (replaceonlymissing and not self.MPAARating) or not replaceonlymissing:
+            self.MPAARating = mmdict['MPAARating']
+            
+        if (replaceonlymissing and not self.Description) or not replaceonlymissing:
+            self.Description = mmdict['Description']
+            
+        if (replaceonlymissing and not self.Type) or not replaceonlymissing:
+            self.Type = mmdict['Type']
+        
+        if (replaceonlymissing and not self.AspectRatio) or not replaceonlymissing:
+            self.AspectRatio = mmdict['AspectRatio']
+        
+        if (replaceonlymissing and not self.IMDB) or not replaceonlymissing:
+            self.IMDB = mmdict['IMDB']
+        
+        if (replaceonlymissing and not self.TMDbId) or not replaceonlymissing:
+            self.TMDbId = mmdict['TMDbId']
+        
+        #if (replaceonlymissing and not self.Genres) or not replaceonlymissing:
+        self.Genres = mmdict['Genres']
+        
+        #if (replaceonlymissing and not self.Persons) or not replaceonlymissing:
+        self.Persons = mmdict['Persons']
+        
+        #if (replaceonlymissing and not self.Studios) or not replaceonlymissing:
+        self.Studios = mmdict['Studios']
     

@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-import cherrypy, imp
+import cherrypy, imp, time
 import lxml.etree as ET
 from cherrypy.lib.static import serve_file
 from PIL import Image
@@ -42,7 +42,7 @@ class MainProgram:
                 print "Error loading module " + name + " : " + str(inst)
             else:
                 self.fetchers[module.fetcher.datasource] = module.fetcher
-                for name, func in vars(module.fetcher).iteritems():
+                for name, func in vars(module).iteritems():
                     if hasattr(func, 'searchkw'):
                         searchkw = str(func.searchkw)
                         self.moviesearchers[searchkw] = func
@@ -161,10 +161,8 @@ class MainProgram:
                 ET.SubElement(movietag, 'Path').text = movie.Dir.decode("utf-8", "ignore")
         
         imdburl = google_url("site:imdb.com/name " + Name, "imdb.com/name/nm[0-9]*/")
-        
         title = ET.SubElement(root, 'listname') #.text = 'Movies with %s (%s)' % (Name, moviecount)
-        ET.SubElement(title, 'a', {"href" : imdburl}).text = 'Movies with %s (%s)' % (Name, moviecount)
-        #indent(root)
+        ET.SubElement(title, 'a', {"href" : imdburl}).text = 'Movies with %s (%s)' % (Name.decode('UTF-8'), moviecount)
         output = '<?xml-stylesheet type="text/xsl" href="/Templates/index.xsl"?>\n' + ET.tostring(root)
         response = cherrypy.response
         response.headers['Content-Type'] = 'text/xml'
@@ -323,13 +321,53 @@ class MainProgram:
             return "You are not authorized to edit metadata"
     getMovieXML.exposed = True
     
-    def fetchmedia(self, movieid, type, identifier):
-        fetcher = self.fetchers['imdb'](identifier)
-        results = fetcher.searchByTitle(identifier)
+    def fetchmediasearch(self, movieid, identifier):
+        results = self.moviesearchers['imdbtitle'](identifier)
         response = cherrypy.response
         response.headers['Content-Type'] = 'application/json'
         return json.JSONEncoder().encode(results)
-    fetchmedia.exposed = True
+    fetchmediasearch.exposed = True
+    
+    def fetchmetadata(self, movieid, replaceonlymissing, identifier):
+        for m in self.moviesdb:
+            if m.ID == movieid: dbmovie = m
+        
+        if replaceonlymissing == "true":
+            replaceonlymissing = True
+        else:
+            replaceonlymissing = False
+        
+        fetcher = self.fetchers['imdb'](identifier)
+        
+        mmdata = {"LocalTitle" : fetcher.LocalTitle,
+                  "OriginalTitle" : fetcher.OriginalTitle,
+                  "SortTitle" : fetcher.OriginalTitle,
+                  "ProductionYear" : fetcher.ProductionYear,
+                  "RunningTime" : fetcher.RunningTime,
+                  "IMDBrating" : fetcher.IMDBrating,
+                  "MPAARating" : fetcher.MPAARating,
+                  "AspectRatio" : fetcher.AspectRatio,
+                  "Genres" : fetcher.Genres,
+                  "Studios" : fetcher.Studios,
+                  "Persons" : fetcher.Persons,
+                  "Description" : fetcher.Description,
+                  "Added" :  str(time.strftime("%m/%d/%Y %I:%M:%S %p", time.localtime())),
+                  "Type" : "",
+                  "IMDB" : fetcher.IMDB,
+                  "TMDbId" : ""
+                  }
+        
+        print "Datetime " + str(time.strftime("%m/%d/%Y %I:%M:%S %p", time.localtime()))
+        mm = mymovies.MyMovie(os.path.join(dbmovie.Dir, "mymovies.xml"))
+        mm.loadFromDictionary(mmdata, replaceonlymissing)
+        #mm.save() #disabled for testing purposes 
+
+        #results = fetcher.getByIMDBID(identifier)
+        response = cherrypy.response
+        response.headers['Content-Type'] = 'text/xml'
+        return ET.tostring(mm.dom)
+    
+    fetchmetadata.exposed = True
     
     def exit(self):
         sys.exit(0)
@@ -364,9 +402,9 @@ def google_url(searchterm, regexstring):
                 url = result['url']
                 url = url.replace('%25','%')
                 return url
-        return
+        return ""
     except:
-        return
+        return ""
 
 
 

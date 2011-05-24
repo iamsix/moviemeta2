@@ -32,7 +32,7 @@
 			#fetchdialog {display: none}
 			#fetchsearchresults .ui-selecting { background: #FECA40; }
 			#fetchsearchresults .ui-selected { background: #F39814; color: white; }
-			#fetchsearchresults { list-style-type: none; margin: 0; padding: 0;}
+			#fetchsearchresults { list-style-type: none; margin: 0; padding: 0; color: black;}
 			#fetchsearchresults li { margin: 3px; padding: 0.4em; background: #ccc;}
 	
 	      </style>     
@@ -209,8 +209,8 @@
 	          		<a class="header">Fetch Movie Data</a><br />
 	          	</span>
 	        </div>
-	        <div id="fetchdialog" style="background: #333;" title="Movie Search">
-		    	<input type="text" id="fetchsearchterm" value="{Title/LocalTitle} {Title/ProductionYear}" /><input type="button" value="Search" onclick="fetchsearch()" />
+	        <div id="fetchdialog" style="background: #333; color: white;" title="Movie Search">
+		    	<input type="text" id="fetchsearchterm" value="{Title/LocalTitle} {Title/ProductionYear}"  style="width: 200px" /><input type="button" value="Search" onclick="fetchsearch()" /> <input type="checkbox" id="replacemissing" checked="checked" />Replace only missing data
 		    	<ul id="fetchsearchresults">
 		    		No results found
 		    	</ul>
