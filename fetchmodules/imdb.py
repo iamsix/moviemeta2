@@ -162,9 +162,21 @@ class fetcher(object):
             summary = summary.replace("\n", " ")
             return summary
     
-    def getByIMDBID(self, ID):
-        pass
-    getByIMDBID.datagetter = "imdbid"
-    getByIMDBID.desc = "Get IMDb data by ID"
+    @property
+    def imageURLs(self): #IMDB returns *One poster image* - no backdrops, nothing else
+        if self.imdbpage.find("img", attrs={'alt' : re.compile("Poster$")}):
+            img = self.imdbpage.find("img", attrs={'alt' : re.compile("Poster$")})
+            thumb = img['src']
+            imdburl = ('http://www.imdb.com/' + img.parent['href'])
+            opener = urllib2.build_opener()
+            opener.addheaders = [('User-Agent',"Opera/9.10 (YourMom 8.0)"),
+                                 ('Range', "bytes=0-40960")]
+            pagetmp = opener.open(imdburl)
+            img = BeautifulSoup(pagetmp.read())           
+            img = img.find(id="primary-img")
+            full = img['src']
+            images = []
+            images.append({"thumb" : thumb, "full" : full, "imgtype" : "movieposter", "imageid" : 0})
+            return images
     
     

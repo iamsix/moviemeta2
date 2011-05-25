@@ -31,82 +31,26 @@ def scandirectory(self, path):
     
 class movies:
     def __init__(self, ID, SortTitle, LocalTitle, ProductionYear, Dir, HasXML, XMLComplete, Genres, Actors, IMDBRating, DateAdded):
-        self._SortTitle = SortTitle
-        self._LocalTitle = LocalTitle
-        self._ProductionYear = ProductionYear
+        self.SortTitle = SortTitle
+        self.LocalTitle = LocalTitle
+        self.ProductionYear = ProductionYear
         self._Dir = Dir
-        self._HasXML = HasXML
-        self._XMLComplete = XMLComplete
-        self._Genres = Genres
-        self._Actors = Actors
-        self._IMDBRating = IMDBRating
-        self._DateAdded = DateAdded
-        self._ID = ID
+        self.HasXML = HasXML
+        self.XMLComplete = XMLComplete
+        self.Genres = Genres
+        self.Actors = Actors
+        self.IMDBRating = IMDBRating
+        self.DateAdded = DateAdded
+        self.ID = ID
     
     def __getitem__(self, key):
-        if key == "SortTitle": return self._SortTitle.lower()
+        if key == "SortTitle": return self.SortTitle.lower()
         else: raise KeyError
         pass
     
     @property
     def Dir(self):
         return self._Dir
-
-    @property
-    def ID(self):
-        return str(self._ID)
-    @ID.setter
-    def ID(self, value):
-        self._ID = value
-
-    @property
-    def LocalTitle(self):
-        return self._LocalTitle
-    @LocalTitle.setter
-    def LocalTitle(self, value):
-        self._LocalTitle = value
-        
-    @property
-    def SortTitle(self):
-        return self._LocalTitle
-    @SortTitle.setter
-    def SortTitle(self, value):
-        self._SortTitle = value
-
-    @property
-    def ProductionYear(self):
-        return self._ProductionYear
-    @ProductionYear.setter
-    def ProductionYear(self, value):
-        self._ProductionYear = value
-        
-    @property
-    def HasXML(self):
-        return self._HasXML
-    @HasXML.setter
-    def HasXML(self, value):
-        self._HasXML = value
-        
-    @property
-    def XMLComplete(self):
-        return self._XMLComplete
-    @XMLComplete.setter
-    def XMLComplete(self, value):
-        self._XMLComplete = value
-    
-    @property
-    def Genres(self):
-        return self._Genres
-    @Genres.setter
-    def Genres(self, value):
-        self._Genres = value
-        
-    @property
-    def Actors(self):
-        return self._Actors
-    @Actors.setter
-    def Actors(self, value):
-        self._Actors = value
     
 class MyMovie(object):
     class Person:
@@ -153,7 +97,7 @@ class MyMovie(object):
             root = ET.Element("Title")
             ET.SubElement(root, 'LocalTitle').text = name
             ET.SubElement(root, 'SortTitle').text = name
-            ET.SubElement(root, 'OriginalTitle').text = name
+            ET.SubElement(root, 'OriginalTitle')
             ET.SubElement(root, 'ProductionYear').text = year
             ET.SubElement(root, 'Added')
             ET.SubElement(root, 'RunningTime')
@@ -328,7 +272,7 @@ class MyMovie(object):
         genres = []
         elements = self.dom.findall('Genres/Genre')
         for g in elements:
-            genres.append(g.text)
+            if g.text: genres.append(g.text)
         
         return genres   
     @Genres.setter
@@ -343,15 +287,16 @@ class MyMovie(object):
         studios = []
         elements = self.dom.findall('Studios/Studio')
         for s in elements:
-            studios.append(s.text)
+            if s.text: studios.append(s.text)
         
         return studios       
     @Studios.setter
     def Studios(self, value): 
-        s = self.dom.find('Studios')
-        s.clear()
-        for Studio in value:
-            ET.SubElement(s, 'Studio').text = Studio
+        if value:
+            s = self.dom.find('Studios')
+            s.clear()
+            for Studio in value:
+                ET.SubElement(s, 'Studio').text = Studio
     
     @property
     def Persons (self):
@@ -361,15 +306,16 @@ class MyMovie(object):
             name = ""
             type = ""
             role = ""
-            if p.find('Name') is not None:
+            if p.find('Name') is not None and p.find('Name').text:
                 name = str(p.find('Name').text)
-            if p.find('Type') is not None:
-                type = str(p.find('Type').text)
-            if p.find('Role') is not None:
-                type = str(p.find('Role').text)
-                    
-            person = self.Person(name, type, role)
-            persons.append(person)
+                if p.find('Type') is not None:
+                    type = str(p.find('Type').text)
+                if p.find('Role') is not None:
+                    type = str(p.find('Role').text)
+                        
+                person = self.Person(name, type, role)
+                persons.append(person)
+                
         return persons   
     @Persons.setter
     def Persons(self, value):
@@ -414,6 +360,7 @@ class MyMovie(object):
             xml = open(self.XMLpath, "w+")   
         xml.write(ET.tostring(self.dom, pretty_print=True))
         xml.close()
+        self._HasXML = True
         
     def loadFromDictionary(self, mmdict, replaceonlymissing = False):
         if (replaceonlymissing and not self.LocalTitle) or not replaceonlymissing:
@@ -455,12 +402,15 @@ class MyMovie(object):
         if (replaceonlymissing and not self.TMDbId) or not replaceonlymissing:
             self.TMDbId = mmdict['TMDbId']
         
-        #if (replaceonlymissing and not self.Genres) or not replaceonlymissing:
-        self.Genres = mmdict['Genres']
+        ### need to add special appending code for these 3 that checks existing entries
+        ### and adds them if they're not already on the list
         
-        #if (replaceonlymissing and not self.Persons) or not replaceonlymissing:
-        self.Persons = mmdict['Persons']
+        if (replaceonlymissing and not self.Genres) or not replaceonlymissing:
+            self.Genres = mmdict['Genres']
         
-        #if (replaceonlymissing and not self.Studios) or not replaceonlymissing:
-        self.Studios = mmdict['Studios']
+        if (replaceonlymissing and not self.Persons) or not replaceonlymissing:
+            self.Persons = mmdict['Persons']
+        
+        if (replaceonlymissing and not self.Studios) or not replaceonlymissing:
+            self.Studios = mmdict['Studios']
     

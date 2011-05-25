@@ -10,7 +10,7 @@
         <style type="text/css">
 	      	body {background: #232323 url('/Images/bg-gradient.png') repeat-x; font-family: Arial}
 	        a.header{color: #DDD; font-weight: bold; font-size: 10pt;}
-	        a{color: #4e5785;}
+	        a{color: #4e5785; cursor: pointer;}
 	        a.movieXMLcomplete{color: green;}
 	        a.movieXMLnone{color: red;}
 	        a.movieXMLincomplete{color: #4f61c5;}
@@ -34,16 +34,27 @@
 			#fetchsearchresults .ui-selected { background: #F39814; color: white; }
 			#fetchsearchresults { list-style-type: none; margin: 0; padding: 0; color: black;}
 			#fetchsearchresults li { margin: 3px; padding: 0.4em; background: #ccc;}
+			
+			#imagepicker {display: none}
+			#imagepickerlist .ui-selecting { background: #FECA40; }
+			#imagepickerlist .ui-selected { background: #F39814; color: white; }
+			#imagepickerlist { list-style-type: none; margin: 0; padding: 0; color: black;}
 	
 	      </style>     
 	      <style type="text/css">
 			@import "/Templates/jquery-ui-1.8.13.custom.css";
 		  </style>
+		  <script>
+		  	var movieid='<xsl:value-of select="Title/movieID" />';
+		  	var IMDbID='<xsl:value-of select="Title/IMDB" />';
+		  	var TMDbID='<xsl:value-of select="Title/TMDbId" />';
+		  </script>
 		  
 	  	  <script type="text/javascript" src="/Scripts/searchsuggestions.js"> </script>
 	      <script type="text/javascript" src="/Scripts/jquery-1.6.js"> </script>
 	      <script type="text/javascript" src="/Scripts/jquery-ui-1.8.13.custom.min.js"> </script>
 	      <script type="text/javascript" src="/Scripts/jquery-ui-timepicker-addon.js"> </script> 
+	      <script type="text/javascript" src="/Scripts/jcarousellite_1.0.1.min.js"> </script> 
 	      <script type="text/javascript" src="/Scripts/editmovie.js"> </script>
       </head>     
       <body>
@@ -81,7 +92,7 @@
             <div id="lefcol" style="width: 210px; float:left;overflow: auto; font-size: 10pt; padding-bottom: 15px; padding-right: 20px;">
              
               <b>Poster</b><br />
-              <img src="/movie/{Title/movieID}/folder.jpg" alt="Movie Poster" style="margin-top: 10px; width: 180px"/>
+              <img id="movieposter" src="/movie/{Title/movieID}/folder.jpg" alt="Movie Poster" style="margin-top: 10px; width: 180px"/>
               <br /><br />
 	          <span style="font-size: 12pt; font-weight: bold;">Movie Info </span><br/>
 	          <div id="movieinfo">
@@ -91,8 +102,9 @@
 	              <b>Type: </b> <span id="spType"><xsl:value-of select="Title/Type"/></span><br/>
 	              <b>Added: </b> <span id="spAdded"><xsl:value-of select="Title/Added"/></span><br/>
 	              <br/>
-	              <b>IMDB: </b> <span id="spIMDB"><a href="http://www.imdb.com/title/{Title/IMDB}/">Link</a></span><br/>
-	              <b>TMDb: </b> <span id="spTMDbId"><a href="http://www.themoviedb.org/movie/{Title/TMDbId}">Link</a></span><br/>
+	              
+	              <b>IMDB: </b> <span id="spIMDB"><xsl:if test="not(Title/IMDB='')"><a href="http://www.imdb.com/title/{Title/IMDB}/">Link</a></xsl:if></span><br/>
+	              <b>TMDb: </b> <span id="spTMDbId"><xsl:if test="not(Title/TMDbId='')"><a href="http://www.themoviedb.org/movie/{Title/TMDbId}">Link</a></xsl:if></span><br/>              
 	          </div>
 	          <br />
               <b>Genres</b><br />
@@ -115,7 +127,7 @@
               
             </div>
             <div id="rightcol" style="font-size: 10pt; overflow: auto; padding-right: 10px;">
-              <img src="/movie/{Title/movieID}/backdrop.jpg" alt="Movie frame" style="Height: 250px; padding-top: 10px; padding-left: 10px; float: right;"/>
+              <img id="moviebackdrop" src="/movie/{Title/movieID}/backdrop.jpg" alt="Movie frame" style="Height: 250px; padding-top: 10px; padding-left: 10px; float: right;"/>
               <span id="titles">
 	              <span id="movietitle" style="font-weight: bold; font-size: 20pt;">
 	                <xsl:value-of select="Title/LocalTitle"/>
@@ -133,8 +145,8 @@
               </span>
               <div id="movierating">
 	              <div style="background: url('/Images/stars.png') 0 -16px repeat-x; width: 180px; height: 15px; float: left;">
-	                <div style="background: url('/Images/stars.png') 0 0 repeat-x; height: 15px; width: {Title/IMDBrating * 10}%; float: left; color: transparent;">
-	                  <pre style="font-size: 15px;"></pre>
+	                <div style="background: url('/Images/stars.png') 0 0 repeat-x; height: 15px; width: {Title/IMDBrating * 10}%; float: left; color: transparent; white-space:pre">
+
 	                </div>
 	              </div>
               
@@ -212,8 +224,16 @@
 	        <div id="fetchdialog" style="background: #333; color: white;" title="Movie Search">
 		    	<input type="text" id="fetchsearchterm" value="{Title/LocalTitle} {Title/ProductionYear}"  style="width: 200px" /><input type="button" value="Search" onclick="fetchsearch()" /> <input type="checkbox" id="replacemissing" checked="checked" />Replace only missing data
 		    	<ul id="fetchsearchresults">
-		    		No results found
+		    		Loading Results
 		    	</ul>
+        	</div>
+        	<div id="imagepicker" style="background: #333; color: white;" title="Select Image">
+        		<div class="imagecarousel">
+        		<button style="float:left" class="prev">&lt;&lt;</button><button style="float:right" class="next">&gt;&gt;</button>
+        		<ul id="imagepickerlist">
+        			Loading Results
+        		</ul>
+        		</div>
         	</div>
         </xsl:if>
       </body>

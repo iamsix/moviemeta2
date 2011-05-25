@@ -1,8 +1,67 @@
 var pageeditstate = "display"
 
+$(document).ready(function() {
+	 $('#movieposter, #moviebackdrop').bind('dblclick', function(event) {
+       	 $('#imagepicker').dialog({
+			width:500,
+			modal: true,
+			create: function() {
+				$.ajax({
+	               url: "/fetchimagelist/" + movieid,
+	               //type: "POST",
+	               contentType: "application/x-www-form-urlencoded",
+	               dataType: 'json',
+	               data: 'imagetype=movieposter&identifier=' + IMDbID,
+	               success: function (data) {
+		               	$('#imagepickerlist').html('')
+			               	$(data).each(function(i){
+			               		$('#imagepickerlist').append('<li id="'+ this.imageid +'"><img src="/fetchedpicthumbs/' + movieid + '/' + i +'?imgtype=movieposter" alt="" /></li>');	
+			              	});
+	              		}
+	              	})
+					$('.default .imagecarousel').jCarouselLite({
+					    btnNext: ".default .next",
+					    btnPrev: ".default .prev"
+					});
+					$('#imagepickerlist').selectable({
+						stop: function(e, ui) {
+               			  $(".ui-selected:first", this).each(function() {
+		                     $(this).siblings().removeClass("ui-selected");
+              			  });
+						}
+						})
+			  },
+			buttons: {
+					"Select Image": function() {
+						
+						$.ajax({
+			               url: "/savemovieimage/" + movieid + "/" + $('.ui-selected:first').attr("id"),
+			               //type: "POST",
+			               contentType: "application/x-www-form-urlencoded",
+			               //dataType: 'json',
+			               data: 'imgtype=movieposter',
+			               success: function (data) {
+			               		$( '#fetchdialog' ).dialog( "close" );
+			               		location.reload(true);
+			               }
+			            });
+			            
+						
+					},
+					Cancel: function() {
+						$( this ).dialog( "close" );
+					}
+				}
+		});
+               	
+  	 });
+	 });
+//})
+
+
 function fetchsearch()
 {
-	var movieid = window.location.pathname.split( '/' )[2];
+	//var movieid = window.location.pathname.split( '/' )[2];
 	$.ajax({
                url: "/fetchmediasearch/" + movieid,
                type: "POST",
@@ -31,7 +90,7 @@ function fetchsearch()
 
 function fetchdialog()
 {
-	var movieid = window.location.pathname.split( '/' )[2];
+	//var movieid = window.location.pathname.split( '/' )[2];
 	$('#fetchdialog').dialog({
 			width:500,
 			modal: true,
@@ -52,7 +111,6 @@ function fetchdialog()
 					
 				},
 				Cancel: function() {
-					alert($('#replacemissing:checked').val()  != undefined)
 					$( this ).dialog( "close" );
 				}
 			}
@@ -78,7 +136,7 @@ function addListItem(itemchild)
 
 function saveMovieInfo()
 {
-	var movieid = window.location.pathname.split( '/' )[2];
+	//var movieid = window.location.pathname.split( '/' )[2];
 	
 	var Genres = new Array();
 	$('#GenreList').children('li').each(function (i) {
@@ -154,7 +212,7 @@ function editMovieInfo()
 {
 	
 	
-	var movieid = window.location.pathname.split( '/' )[2];
+	//var movieid = window.location.pathname.split( '/' )[2];
 	$.ajax({
 		url: '/getMovieXML',
 		data: "movieID=" + movieid,
@@ -224,9 +282,9 @@ function loadEditsFromXML(data)
 			option = $(data).find('Genre');
 			var genrelist = $('<ul class="sortablelist" id="GenreList"></ul>');
 			for (i = 0; i <= option.length-1; i++) {
-				genrelist.append('<li><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input class="genreAC" type="text" value="' + option.eq(i).text() + '" /><a href="#" onclick="rmListItem(this)">x</a></li>');
+				genrelist.append('<li><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input class="genreAC" type="text" value="' + option.eq(i).text() + '" /><a onclick="rmListItem(this)">x</a></li>');
 			}
-			$('#spGenres').html('<ul class="sortablelist"><li id="newGenre"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input id="newGenrei" type="text" placeholder="New Genre" /><a href="#" onclick="addListItem(this)">+</a></li></ul>');
+			$('#spGenres').html('<ul class="sortablelist"><li id="newGenre"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input id="newGenrei" type="text" placeholder="New Genre" /><a onclick="addListItem(this)">+</a></li></ul>');
 			genrelist.appendTo('#spGenres');
 			
 			$( ".genreAC" ).autocomplete({
@@ -255,9 +313,9 @@ function loadEditsFromXML(data)
 			option = $(data).find('Studio');
 			var studiolist = $('<ul class="sortablelist" id="StudioList"></ul>');
 			for (i = 0; i <= option.length-1; i++) {
-				studiolist.append('<li><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input type="text" value="' + option.eq(i).text() + '" /><a href="#" onclick="rmListItem(this)">x</a></li>');
+				studiolist.append('<li><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input type="text" value="' + option.eq(i).text() + '" /><a onclick="rmListItem(this)">x</a></li>');
 			}			
-			$('#spStudios').html('<ul class="sortablelist"><li id="newStudio"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input type="text" placeholder="New Studio" /><a href="#" onclick="addListItem(this)">+</a></li></ul>');
+			$('#spStudios').html('<ul class="sortablelist"><li id="newStudio"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input type="text" placeholder="New Studio" /><a onclick="addListItem(this)">+</a></li></ul>');
 			studiolist.appendTo('#spStudios');	
 				
 			$( "#StudioList" ).sortable({
@@ -302,10 +360,10 @@ function loadEditsFromXML(data)
 			for (i = 0; i <= option.length-1; i++) {
 				if (option.eq(i).children('Type').text() != "Actor")
 				{
-					crewlist.append('<li><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input id="crewname" type="text" value="' + option.eq(i).children('Name').text() + '" /> as: <input id="crewjob" type="text" value="' + option.eq(i).children('Type').text() +'" /><a href="#" onclick="rmListItem(this)">x</a></li>');					
+					crewlist.append('<li><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input id="crewname" type="text" value="' + option.eq(i).children('Name').text() + '" /> as: <input id="crewjob" type="text" value="' + option.eq(i).children('Type').text() +'" /><a onclick="rmListItem(this)">x</a></li>');					
 				}
 			}
-			$('#moviecrew').html('<ul class="sortablelist"><li id="newCrew"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input id="crewname" type="text" placeholder="Crew Name" /> as: <input id="crewjob" type="text" placeholder="Job" /><a href="#" onclick="addListItem(this)">+</a></li></ul>')
+			$('#moviecrew').html('<ul class="sortablelist"><li id="newCrew"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input id="crewname" type="text" placeholder="Crew Name" /> as: <input id="crewjob" type="text" placeholder="Job" /><a onclick="addListItem(this)">+</a></li></ul>')
 			crewlist.appendTo('#moviecrew');
 			$( "#newCrew" ).draggable({
 				connectToSortable: "#CrewList",
@@ -322,10 +380,10 @@ function loadEditsFromXML(data)
 			for (i = 0; i <= option.length-1; i++) {
 				if (option.eq(i).children('Type').text() == "Actor")
 				{
-					castlist.append('<li><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input id="castname" type="text" value="' + option.eq(i).children('Name').text() + '" /> as: <input id="castrole" type="text" value="' + option.eq(i).children('Role').text() +'" /><a href="#" onclick="rmListItem(this)">x</a></li>');					
+					castlist.append('<li><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input id="castname" type="text" value="' + option.eq(i).children('Name').text() + '" /> as: <input id="castrole" type="text" value="' + option.eq(i).children('Role').text() +'" /><a onclick="rmListItem(this)">x</a></li>');					
 				}
 			}
-			$('#moviecast').html('<ul class="sortablelist"><li id="newCast"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input id="castname" type="text" placeholder="Actor Name" /> as: <input id="castrole" type="text" placeholder="Role" /><a href="#" onclick="addListItem(this)">+</a></li></ul>')
+			$('#moviecast').html('<ul class="sortablelist"><li id="newCast"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span><input id="castname" type="text" placeholder="Actor Name" /> as: <input id="castrole" type="text" placeholder="Role" /><a onclick="addListItem(this)">+</a></li></ul>')
 			castlist.appendTo('#moviecast');
 			$( "#newCast" ).draggable({
 				connectToSortable: "#ActorList",

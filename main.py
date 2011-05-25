@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-import cherrypy, imp, time
+import cherrypy, imp, time, cStringIO
 import lxml.etree as ET
 from cherrypy.lib.static import serve_file
 from PIL import Image
@@ -254,7 +254,11 @@ class MainProgram:
                 else:
                     return serve_file(os.path.join(os.getcwd(), "Images", "nobackdrop.png"), content_type='image/png')
             elif filename == "nfo":
-                pass
+                files = os.listdir(dbmovie.Dir)
+                for fi in files:
+                    root, ext = os.path.splitext(fi)
+                    if ext == ".nfo":
+                        return serve_file(os.path.join(dbmovie.Dir, fi), content_type='text/plain')
             
             #if self.moviesdb[int(movieid)].HasXML:
             movie = mymovies.MyMovie(os.path.join(dbmovie.Dir, "mymovies.xml"))
@@ -283,14 +287,24 @@ class MainProgram:
     def saveMovieXML(self, movieID):
         #Saves an edit page back to the mymovies.xml
         #the form is returned back as JSON with properties of every mymovies element.
-        for m in self.moviesdb:
-            if m.ID == movieID: dbmovie = m
-        jsonBody = cherrypy.request.body.read()
         #TODO - Fix this remote IP
         if cherrypy.request.remote.ip == "192.168.1.100":
+            jsonBody = json.loads(cherrypy.request.body.read())
+            for m in self.moviesdb:
+                if m.ID == movieID: dbmovie = m
+                               
             mm = mymovies.MyMovie(os.path.join(dbmovie.Dir, "mymovies.xml"))
-            mm.loadFromDictionary(json.loads(jsonBody))
+            mm.loadFromDictionary(jsonBody)
             mm.save() #disabled for testing purposes
+            
+            if not dbmovie.HasXML: self.unprocessedcount -= 1
+            dbmovie.LocalTitle = mm.LocalTitle
+            dbmovie.SortTitle = mm.SortTitle
+            dbmovie.ProductionYear = mm.ProductionYear
+            dbmovie.HasXML = True
+            dbmovie.Genres = mm.Genres
+            self.moviesdb.sort(key=itemgetter("SortTitle"))
+                    
         else:
             cherrypy.response.status = 403
             return "You are not authorized to edit metadata"
@@ -328,20 +342,18 @@ class MainProgram:
         return json.JSONEncoder().encode(results)
     fetchmediasearch.exposed = True
     
-    def fetchmetadata(self, movieid, replaceonlymissing, identifier):
+    def fetchmetadata(self, movieid, identifier, replaceonlymissing=True):
         for m in self.moviesdb:
             if m.ID == movieid: dbmovie = m
         
-        if replaceonlymissing == "true":
-            replaceonlymissing = True
-        else:
-            replaceonlymissing = False
+        if replaceonlymissing == "true": replaceonlymissing = True
+        else: replaceonlymissing = False
         
         fetcher = self.fetchers['imdb'](identifier)
         
         mmdata = {"LocalTitle" : fetcher.LocalTitle,
                   "OriginalTitle" : fetcher.OriginalTitle,
-                  "SortTitle" : fetcher.OriginalTitle,
+                  "SortTitle" : fetcher.SortTitle,
                   "ProductionYear" : fetcher.ProductionYear,
                   "RunningTime" : fetcher.RunningTime,
                   "IMDBrating" : fetcher.IMDBrating,
@@ -357,17 +369,57 @@ class MainProgram:
                   "TMDbId" : ""
                   }
         
-        print "Datetime " + str(time.strftime("%m/%d/%Y %I:%M:%S %p", time.localtime()))
         mm = mymovies.MyMovie(os.path.join(dbmovie.Dir, "mymovies.xml"))
         mm.loadFromDictionary(mmdata, replaceonlymissing)
-        #mm.save() #disabled for testing purposes 
 
-        #results = fetcher.getByIMDBID(identifier)
         response = cherrypy.response
         response.headers['Content-Type'] = 'text/xml'
         return ET.tostring(mm.dom)
     
     fetchmetadata.exposed = True
+    
+    def fetchimagelist(self, movieid, identifier, imagetype):
+        if imagetype=="movieposter":
+            fetcher = self.fetchers['imdb'](identifier)
+            results = fetcher.imageURLs
+            self.fetchimagelist.pics[movieid] = results
+            response = cherrypy.response
+            response.headers['Content-Type'] = 'application/json'
+            return json.JSONEncoder().encode(results)
+    fetchimagelist.exposed = True
+    fetchimagelist.pics={}
+    
+    def fetchedpicthumbs(self, movieid, picture, imgtype):
+        url = self.fetchimagelist.pics[movieid][int(picture)]['thumb']
+        imgdata = urllib2.urlopen(url).read()
+        img = Image.open(cStringIO.StringIO(imgdata))
+        response = cherrypy.response
+        response.headers['Content-Type'] = 'image/jpg'        
+        img.thumbnail((180,270), Image.ANTIALIAS)
+        return img.tostring('jpeg','RGB')
+    fetchedpicthumbs.exposed = True
+    
+    def savemovieimage(self, movieid, picture, imgtype):
+        for m in self.moviesdb:
+            if m.ID == movieid: dbmovie = m
+        url = self.fetchimagelist.pics[movieid][int(picture)]['full']
+        imgdata = urllib2.urlopen(url).read()
+        img = Image.open(cStringIO.StringIO(imgdata))
+        if imgtype=="movieposter":
+            try:
+                file = open(os.path.join(dbmovie.Dir, "folder.jpg"), "rb+")
+                file.truncate()
+            except IOError:
+                file = open(os.path.join(dbmovie.Dir, "folder.jpg"), "wb")
+        if imgtype=="moviebackdrop":
+            try:
+                file = open(os.path.join(dbmovie.Dir, "backdrop.jpg"), "rb+")
+                file.truncate()
+            except IOError:
+                file = open(os.path.join(dbmovie.Dir, "backdrop.jpg"), "wb")
+        img.save(file, "JPEG")
+    savemovieimage.exposed = True
+    
     
     def exit(self):
         sys.exit(0)
