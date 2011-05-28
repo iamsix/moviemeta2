@@ -1,36 +1,33 @@
 import os, lxml.etree as ET, re
 
 def scandirectory(self, path):
-    moviedirectories = []
-    for fn in os.listdir(path):
-        if os.path.isdir(os.path.join(path, fn)):
-            files = os.listdir(os.path.join(path, fn))
-            
-            if "mymovies.dna" in files:
+    for di in os.listdir(path):
+        if os.path.isdir(os.path.join(path, di)):
+            files = os.listdir(os.path.join(path, di))
+            HasPoster = False
+            HasBackdrop = False
+            HasXML = False
+            if "folder.jpg" in files: HasPoster = True
+            if "backdrop.jpg" in files: HasBackdrop = True
+            if "mymovies.xml" in files: HasXML = True
+            if "mymovies.dna" in files:  
                 continue
-            elif "mymovies.xml" in files:
-                moviedirectories.append(fn)
             else:
                 for fi in files:
-                    if True in [fi.find("." + x.strip()) !=-1 for x in self.config.get("general", "FileExtensions").split(",")]:
-                        moviedirectories.append(fn)
-                        break
-    
-    
-    for di in moviedirectories:
-        
- 
-        mymovie = MyMovie(os.path.join(path, di, "mymovies.xml"))
-        Actors = [person.Name.strip().lower() for person in mymovie.Persons]
-        if not mymovie.HasXML:
-            self.unprocessedcount += 1
-        key = hex(hash(os.path.join(path, di)) & 0xffffffff)[2:10]
-        movie = movies(key, mymovie.SortTitle, mymovie.LocalTitle, mymovie.ProductionYear, os.path.join(path, di), mymovie.HasXML, mymovie.XMLComplete, mymovie.Genres,Actors, mymovie.IMDBrating, mymovie.Added)
-          
-        self.moviesdb.append(movie)  
+                    if True in [fi.find("." + x.strip()) !=-1 for x in self.config.get("general", "FileExtensions").split(",")] or HasXML:
+                        mymovie = MyMovie(os.path.join(path, di, "mymovies.xml"))
+                        Actors = [person.Name.strip().lower() for person in mymovie.Persons]
+                        if not mymovie.HasXML:
+                            self.unprocessedcount += 1
+                        key = hex(hash(os.path.join(path, di)) & 0xffffffff)[2:10]
+                        movie = movies(key, mymovie.SortTitle, mymovie.LocalTitle, mymovie.ProductionYear, os.path.join(path, di), mymovie.HasXML, mymovie.XMLComplete, mymovie.Genres,Actors, mymovie.IMDBrating, mymovie.Added, HasPoster, HasBackdrop)
+                          
+                        self.moviesdb.append(movie)  
+                        break      
+
     
 class movies:
-    def __init__(self, ID, SortTitle, LocalTitle, ProductionYear, Dir, HasXML, XMLComplete, Genres, Actors, IMDBRating, DateAdded):
+    def __init__(self, ID, SortTitle, LocalTitle, ProductionYear, Dir, HasXML, XMLComplete, Genres, Actors, IMDBRating, DateAdded, HasPoster, HasBackdrop):
         self.SortTitle = SortTitle
         self.LocalTitle = LocalTitle
         self.ProductionYear = ProductionYear
@@ -42,6 +39,8 @@ class movies:
         self.IMDBRating = IMDBRating
         self.DateAdded = DateAdded
         self.ID = ID
+        self.HasPoster = HasPoster
+        self.HasBackdrop = HasBackdrop
     
     def __getitem__(self, key):
         if key == "SortTitle": return self.SortTitle.lower()
@@ -381,7 +380,7 @@ class MyMovie(object):
         if (replaceonlymissing and not self.RunningTime) or not replaceonlymissing:
             self.RunningTime = mmdict['RunningTime']
             
-        if (replaceonlymissing and not self.IMDBrating) or not replaceonlymissing:
+        if (replaceonlymissing and not self.IMDBrating) or (replaceonlymissing and self.IMDBrating == "0.0") or not replaceonlymissing:
             self.IMDBrating = mmdict['IMDBrating']
             
         if (replaceonlymissing and not self.MPAARating) or not replaceonlymissing:

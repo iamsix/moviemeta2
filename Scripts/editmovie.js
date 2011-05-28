@@ -1,56 +1,90 @@
 var pageeditstate = "display"
 
 $(document).ready(function() {
+	
 	 $('#movieposter, #moviebackdrop').bind('dblclick', function(event) {
+		var identifier = '';
+	 	if (IMDbID != ''){
+	 		midentifier = IMDbID
+	 	} else if (TMDbID != '') {
+	 		midentifier = TMDbID
+	 	} else if ($('#IMDB').val() != ''){
+	 		midentifier = $('#IMDB').val()
+	 	} else if ($('#TMDbId').val() != ''){
+	 		midentifier = $('#TMDbId').val()
+	 	}
+	 	
+	 	if (midentifier == undefined){
+	 		alert("You must have a TMDb or IMDb ID to fetch a poster")
+	 		return;
+	 	}
+	 	
+	 	var imgtype = '';
+	 	if (event.target.id == "movieposter"){
+	 		imgtype = 'poster'
+	 	} else if (event.target.id = "moviebackdrop"){
+	 		imgtype = 'backdrop'
+	 	}
+	 	
        	 $('#imagepicker').dialog({
 			width:500,
 			modal: true,
-			create: function() {
+			open: function() {
+				$('#imagepickerlist').html('Loading')
+
 				$.ajax({
-	               url: "/fetchimagelist/" + movieid,
-	               //type: "POST",
-	               contentType: "application/x-www-form-urlencoded",
-	               dataType: 'json',
-	               data: 'imagetype=movieposter&identifier=' + IMDbID,
-	               success: function (data) {
-		               	$('#imagepickerlist').html('')
-			               	$(data).each(function(i){
-			               		$('#imagepickerlist').append('<li id="'+ this.imageid +'"><img src="/fetchedpicthumbs/' + movieid + '/' + i +'?imgtype=movieposter" alt="" /></li>');	
-			              	});
-	              		}
-	              	})
-					$('.default .imagecarousel').jCarouselLite({
-					    btnNext: ".default .next",
-					    btnPrev: ".default .prev"
-					});
-					$('#imagepickerlist').selectable({
-						stop: function(e, ui) {
-               			  $(".ui-selected:first", this).each(function() {
-		                     $(this).siblings().removeClass("ui-selected");
-              			  });
-						}
+				   url: "/fetchimagelist/" + movieid,
+				   contentType: "application/x-www-form-urlencoded",
+				   dataType: 'json',
+				   data: 'imagetype=' + imgtype + '&identifier=' + midentifier,
+				   success: function (data) {
+				       	//$('#imagepickerlist').html('')
+				       	$('.imagecarousel').html('cats')
+				       	$('.imagecarousel').append('<ul id="imagepickerlist"></ul>')
+				       	
+				       	$(data).each(function(i){
+			           		//$('#imagepickerlist').append(i+1, "<input type='button'>I am item" + i + "</input>")
+			           		$('#imagepickerlist').append('<li id="'+ this.imageid +'">' + this.resolution + '<br ><img src="/fetchedpicthumbs/' + movieid + '/' + this.imageid +'?imgtype=' + imgtype +'" alt="" /></li>');
+			          	});	
+				       	
+				       	$('#imagepickerlist').jcarousel({
+							buttonNextHTML: '<button style="float:right" class="next">&gt;&gt;</button>',
+							buttonPrevHTML: '<button style="float:left" class="prev">&lt;&lt;</button>',
+							size: data.length
 						})
+						
+						$('#imagepickerlist').selectable({
+							stop: function(e, ui) {
+								$(".ui-selected:first", this).each( function() {
+									$(this).siblings().removeClass("ui-selected");
+								});
+							}
+						})
+
+				  	}
+				})
+            			
 			  },
+			close: function() {
+				
+			},
 			buttons: {
 					"Select Image": function() {
-						
 						$.ajax({
-			               url: "/savemovieimage/" + movieid + "/" + $('.ui-selected:first').attr("id"),
-			               //type: "POST",
+			               url: "/savemovieimage/" + movieid + "/" + $('#imagepickerlist li.ui-selected:first').attr("id"),
 			               contentType: "application/x-www-form-urlencoded",
-			               //dataType: 'json',
-			               data: 'imgtype=movieposter',
+			               data: 'imgtype=' + imgtype,
 			               success: function (data) {
-			               		$( '#fetchdialog' ).dialog( "close" );
-			               		location.reload(true);
-			               }
+			               		$( '#imagepicker' ).dialog( "close" );
+			               		document.getElementById(event.target.id).src = document.getElementById(event.target.id).src + "#"		
+			               }  
 			            });
-			            
-						
-					},
-					Cancel: function() {
-						$( this ).dialog( "close" );
-					}
+				            
+							
+						},
+						Cancel: function() {
+							$( this ).dialog( "close" );
+						}
 				}
 		});
                	
@@ -58,6 +92,14 @@ $(document).ready(function() {
 	 });
 //})
 
+//    for (var i = carousel.first; i <= carousel.last; i++) {
+        // Check if the item already exists
+//        if (!carousel.has(i)) {
+            // Add the item
+//            carousel.add(i, "I'm item #" + i);
+//        }
+//    }
+//};
 
 function fetchsearch()
 {
@@ -99,10 +141,9 @@ function fetchdialog()
 					var checked = ($('#replacemissing:checked').val()  != undefined)
 					$.ajax({
 		               url: "/fetchmetadata/" + movieid,
-		               type: "POST",
 		               contentType: "application/x-www-form-urlencoded",
 		               dataType: 'xml',
-		               data: 'replaceonlymissing=' + checked + '&identifier=' + $('.ui-selected:first').attr("id"),
+		               data: 'replaceonlymissing=' + checked + '&identifier=' + $('#fetchsearchresults li.ui-selected:first').attr("id"),
 		               success: function (data) {
 		               		loadEditsFromXML(data)
 		               		$( '#fetchdialog' ).dialog( "close" );
@@ -394,5 +435,8 @@ function loadEditsFromXML(data)
 			$( "#ActorList" ).sortable({
 				receive: function() { $(this).children("li").children("a").html("x").attr('onclick', 'rmListItem(this)');}	
 			});
+			
+			document.getElementById('movieposter').src = document.getElementById('movieposter').src + "#"
+			document.getElementById('moviebackdrop').src = document.getElementById('moviebackdrop').src + "#"
 		
 		}

@@ -30,6 +30,7 @@ class fetcher(object):
     datasource = "imdb"
     mediatype = "movie"
     imdbpage = None
+    mainidentifier = "IMDB"
     
     _identifier = ""
     def __init__ (self, identifier):
@@ -87,7 +88,7 @@ class fetcher(object):
     def MPAARating(self):
         if self.imdbpage.find("img", attrs={'src' : re.compile("certificates\/us\/")}):
             rating = self.imdbpage.find("img", attrs={'src' : re.compile("certificates\/us\/")})
-            rating = rating['alt']
+            rating = rating['alt'].replace("PG_13", "PG-13")
             return rating
         else:
             return "NR"
@@ -148,6 +149,10 @@ class fetcher(object):
         return self._identifier
     
     @property
+    def TMDbId(self):
+        return None
+    
+    @property
     def Description(self):
         page = self.imdbpage.find(id="overview-top")
         if len(page.findAll('p')) == 2:
@@ -163,8 +168,15 @@ class fetcher(object):
             return summary
     
     @property
-    def imageURLs(self): #IMDB returns *One poster image* - no backdrops, nothing else
-        if self.imdbpage.find("img", attrs={'alt' : re.compile("Poster$")}):
+    def posterimages(self):
+        return self.imageURLs("poster")
+    
+    @property
+    def backdropimages(self):
+        return None
+    
+    def imageURLs(self, imgtype = "poster"): #IMDB returns *One poster image* - no backdrops, nothing else
+        if imgtype == "poster" and self.imdbpage.find("img", attrs={'alt' : re.compile("Poster$")}):
             img = self.imdbpage.find("img", attrs={'alt' : re.compile("Poster$")})
             thumb = img['src']
             imdburl = ('http://www.imdb.com/' + img.parent['href'])
@@ -176,7 +188,7 @@ class fetcher(object):
             img = img.find(id="primary-img")
             full = img['src']
             images = []
-            images.append({"thumb" : thumb, "full" : full, "imgtype" : "movieposter", "imageid" : 0})
+            images.append({"thumb" : thumb, "full" : full, "imgtype" : "poster", "imageid" : 0, "resolution" : "" })
             return images
     
     

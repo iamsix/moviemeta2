@@ -15,7 +15,7 @@
 	        a.movieXMLnone{color: red;}
 	        a.movieXMLincomplete{color: #4f61c5;}
 	        #cast {font-family: Arial; font-size: 10pt; cellspacing: 0; cellpadding: 0; border: 0} 
-	        #searchbox{padding: 3px 25px 4px 10px; background:transparent url('/Images/searchbox.png') 0 -24px no-repeat; width: 280px;}
+	        #searchbox{overflow: auto; padding: 3px 25px 4px 10px; background:transparent url('/Images/searchbox.png') 0 -24px no-repeat; width: 280px;}
 	        td.castpic{padding: 2px 5px 2px 5px}
 	        td.person{padding: 5px 60px 0px 30px}
 	        #searchsuggestions{visibility: hidden; box-shadow: 0px 0px 8px #000; border-bottom-left-radius: 5px; border-bottom-right-radius: 5px; border: 1px solid #4e4e4e; padding-bottom: 5px; position: absolute; margin-left: 10px; background-color: #d5d5d5; min-width: 220px;}
@@ -38,7 +38,8 @@
 			#imagepicker {display: none}
 			#imagepickerlist .ui-selecting { background: #FECA40; }
 			#imagepickerlist .ui-selected { background: #F39814; color: white; }
-			#imagepickerlist { list-style-type: none; margin: 0; padding: 0; color: black;}
+			#imagepickerlist {list-style-type: none; margin: 0; padding: 0; color: black;}
+			#imagepickerlist li {overflow: hidden; width: 155px; height:155px; text-align: center; padding-top: 5px;}
 	
 	      </style>     
 	      <style type="text/css">
@@ -54,15 +55,16 @@
 	      <script type="text/javascript" src="/Scripts/jquery-1.6.js"> </script>
 	      <script type="text/javascript" src="/Scripts/jquery-ui-1.8.13.custom.min.js"> </script>
 	      <script type="text/javascript" src="/Scripts/jquery-ui-timepicker-addon.js"> </script> 
-	      <script type="text/javascript" src="/Scripts/jcarousellite_1.0.1.min.js"> </script> 
+	      <script type="text/javascript" src="/Scripts/jquery.jcarousel.min.js"> </script> 
 	      <script type="text/javascript" src="/Scripts/editmovie.js"> </script>
       </head>     
       <body>
         <div style="width: 97%; padding-bottom: 25px; margin-left: auto; margin-right: auto; background-color: #d5d5d5; border-left: 1px solid black; border-right: 1px solid black; overflow: auto;">
           <div id="header" style="height: 117px; background-image: url('/Images/headerimg.png');background-repeat: repeat-x; padding-left: 15px;">
+            <img src="/Images/logo.png" alt="Movie Meta Logo" style="margin-top: 10px; " />
             <div style="float: right; margin-right: 15px; margin-top: 15px; height: 20px; ">
               <form action="/search" method="get">
-                <span id="searchbox">
+                <span id="searchbox" >
                   <input type="text" autocomplete="off" onblur='hideSuggestions()' onkeydown="return keypress(event.keyCode)" onkeyup="searchsuggestion(this, event.keyCode)" placeholder="Search" name="search" style="background: transparent; border: none;font-weight: bold; color: #555; width: 225px;"/>
                 </span>
                 <br />
@@ -72,7 +74,6 @@
                 </span>
               </form>
             </div>
-            <img src="/Images/logo.png" alt="Movie Meta Logo" style="margin-top: 10px; " />
             <div id ="menu" style="margin-top: 14px; color: #DDD; font-size: 10pt; ">
               <span>
                 <a class="header" href="/list" style="padding-right: 15px; ">Movie List</a>
@@ -85,8 +86,12 @@
 	                <a class="header" href="/exit" style="padding-left: 15px;">Shutdown</a>
 	              </span>
               </xsl:if>
-            </div>
+          	</div>
+
           </div>
+            
+            
+
 
           <div id="content" style="padding: 15px 20px 15px 20px;">
             <div id="lefcol" style="width: 210px; float:left;overflow: auto; font-size: 10pt; padding-bottom: 15px; padding-right: 20px;">
@@ -228,11 +233,8 @@
 		    	</ul>
         	</div>
         	<div id="imagepicker" style="background: #333; color: white;" title="Select Image">
-        		<div class="imagecarousel">
-        		<button style="float:left" class="prev">&lt;&lt;</button><button style="float:right" class="next">&gt;&gt;</button>
-        		<ul id="imagepickerlist">
-        			Loading Results
-        		</ul>
+        		<div class="imagecarousel" style="visibility: visible; overflow: hidden; position: relative; z-index: 2; left: 0px;">
+	        		
         		</div>
         	</div>
         </xsl:if>

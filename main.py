@@ -136,11 +136,7 @@ class MainProgram:
         self.config.set("general", "Directories", ",".join(kwargs["mdirectory"]))
         self.config.write(open("main.conf", "w"))
     savesettings.exposed = True
-    
-    def buildmovielist(self, movie, XMLRoot):
-        pass
-
-    
+       
     def Person(self, Name):
         root = ET.Element("movies")
         ET.SubElement(root, 'unprocessed').text = str(self.unprocessedcount)
@@ -241,8 +237,7 @@ class MainProgram:
                     img.thumbnail((180,270), Image.ANTIALIAS)
                     return img.tostring('jpeg','RGB')
                     #return serve_file(os.path.join(self.moviesdb[int(movieid)].Dir, filename), content_type='image/jpg')
-                else:
-                    
+                else:                   
                     return serve_file(os.path.join(os.getcwd(), "Images", "noposter.png"), content_type='image/png')
             elif filename == "backdrop.jpg":
                 if os.path.isfile(os.path.join(dbmovie.Dir, filename)):
@@ -256,8 +251,8 @@ class MainProgram:
             elif filename == "nfo":
                 files = os.listdir(dbmovie.Dir)
                 for fi in files:
-                    root, ext = os.path.splitext(fi)
-                    if ext == ".nfo":
+                    root,ext = os.path.splitext(fi)
+                    if ext.lower() == ".nfo":
                         return serve_file(os.path.join(dbmovie.Dir, fi), content_type='text/plain')
             
             #if self.moviesdb[int(movieid)].HasXML:
@@ -303,6 +298,7 @@ class MainProgram:
             dbmovie.ProductionYear = mm.ProductionYear
             dbmovie.HasXML = True
             dbmovie.Genres = mm.Genres
+            dbmovie.XMLComplete = mm.XMLComplete
             self.moviesdb.sort(key=itemgetter("SortTitle"))
                     
         else:
@@ -336,20 +332,20 @@ class MainProgram:
     getMovieXML.exposed = True
     
     def fetchmediasearch(self, movieid, identifier):
-        results = self.moviesearchers['imdbtitle'](identifier)
+        results = self.moviesearchers['tmdbtitle'](identifier)
         response = cherrypy.response
         response.headers['Content-Type'] = 'application/json'
         return json.JSONEncoder().encode(results)
     fetchmediasearch.exposed = True
     
-    def fetchmetadata(self, movieid, identifier, replaceonlymissing=True):
+    def fetchmetadata(self, movieid, identifier, replaceonlymissing=True, fetchimages=True):
         for m in self.moviesdb:
             if m.ID == movieid: dbmovie = m
         
         if replaceonlymissing == "true": replaceonlymissing = True
         else: replaceonlymissing = False
         
-        fetcher = self.fetchers['imdb'](identifier)
+        fetcher = self.fetchers['tmdb'](identifier)
         
         mmdata = {"LocalTitle" : fetcher.LocalTitle,
                   "OriginalTitle" : fetcher.OriginalTitle,
@@ -366,9 +362,16 @@ class MainProgram:
                   "Added" :  str(time.strftime("%m/%d/%Y %I:%M:%S %p", time.localtime())),
                   "Type" : "",
                   "IMDB" : fetcher.IMDB,
-                  "TMDbId" : ""
+                  "TMDbId" : fetcher.TMDbId
                   }
         
+        if fetchimages and not dbmovie.HasPoster:
+            self.downloadimage(fetcher.posterimages[0]['full'], os.path.join(dbmovie.Dir, "folder.jpg"))
+            dbmovie.HasPoster = True
+        if fetchimages and not dbmovie.HasBackdrop:
+            self.downloadimage(fetcher.backdropimages[0]['full'], os.path.join(dbmovie.Dir, "backdrop.jpg"))
+            dbmovie.HasBackdrop = True         
+            
         mm = mymovies.MyMovie(os.path.join(dbmovie.Dir, "mymovies.xml"))
         mm.loadFromDictionary(mmdata, replaceonlymissing)
 
@@ -378,47 +381,63 @@ class MainProgram:
     
     fetchmetadata.exposed = True
     
-    def fetchimagelist(self, movieid, identifier, imagetype):
-        if imagetype=="movieposter":
-            fetcher = self.fetchers['imdb'](identifier)
-            results = fetcher.imageURLs
-            self.fetchimagelist.pics[movieid] = results
+    def fetchimagelist(self, movieid, imagetype, identifier):
+        fetcher = self.fetchers['tmdb'](identifier)
+        results = []
+        if imagetype=="poster":  
+            results = fetcher.posterimages
+            self.fetchimagelist.posters[movieid] = results
+        if imagetype=="backdrop":
+            results = fetcher.backdropimages
+            self.fetchimagelist.backdrops[movieid] = results
+        if results:
+            print "THERE ARE %s RESULTS IN THE LIST" % len(results)
             response = cherrypy.response
             response.headers['Content-Type'] = 'application/json'
             return json.JSONEncoder().encode(results)
     fetchimagelist.exposed = True
-    fetchimagelist.pics={}
+    fetchimagelist.posters={}
+    fetchimagelist.backdrops={}
     
     def fetchedpicthumbs(self, movieid, picture, imgtype):
-        url = self.fetchimagelist.pics[movieid][int(picture)]['thumb']
-        imgdata = urllib2.urlopen(url).read()
-        img = Image.open(cStringIO.StringIO(imgdata))
-        response = cherrypy.response
-        response.headers['Content-Type'] = 'image/jpg'        
-        img.thumbnail((180,270), Image.ANTIALIAS)
-        return img.tostring('jpeg','RGB')
+        if imgtype == "poster":
+            url = self.fetchimagelist.posters[movieid][int(picture)]['thumb']
+        elif imgtype == "backdrop":
+            url = self.fetchimagelist.backdrops[movieid][int(picture)]['thumb']
+        print "cats " + url
+        try:
+            imgdata = urllib2.urlopen(url).read()
+            img = Image.open(cStringIO.StringIO(imgdata))
+            response = cherrypy.response
+            response.headers['Content-Type'] = 'image/jpg' 
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Cache-Control'] = 'no-cache'
+            img.thumbnail((155,155), Image.ANTIALIAS)
+            return img.tostring('jpeg','RGB')
+        except Exception as inst:
+            print "ESDFJSDFJHSDFJKHSDKFHJDSKJHSDF" + str(inst)
     fetchedpicthumbs.exposed = True
     
     def savemovieimage(self, movieid, picture, imgtype):
         for m in self.moviesdb:
             if m.ID == movieid: dbmovie = m
-        url = self.fetchimagelist.pics[movieid][int(picture)]['full']
-        imgdata = urllib2.urlopen(url).read()
-        img = Image.open(cStringIO.StringIO(imgdata))
-        if imgtype=="movieposter":
-            try:
-                file = open(os.path.join(dbmovie.Dir, "folder.jpg"), "rb+")
-                file.truncate()
-            except IOError:
-                file = open(os.path.join(dbmovie.Dir, "folder.jpg"), "wb")
-        if imgtype=="moviebackdrop":
-            try:
-                file = open(os.path.join(dbmovie.Dir, "backdrop.jpg"), "rb+")
-                file.truncate()
-            except IOError:
-                file = open(os.path.join(dbmovie.Dir, "backdrop.jpg"), "wb")
-        img.save(file, "JPEG")
+        if imgtype=="poster":
+            url = self.fetchimagelist.posters[movieid][int(picture)]['full']
+            self.downloadimage(url, os.path.join(dbmovie.Dir, "folder.jpg"))
+        if imgtype=="backdrop":
+            url = self.fetchimagelist.backdrops[movieid][int(picture)]['full']
+            self.downloadimage(url, os.path.join(dbmovie.Dir, "backdrop.jpg"))
     savemovieimage.exposed = True
+    
+    def downloadimage(self, imgurl, diskfilename):
+        imgdata = urllib2.urlopen(imgurl).read()
+        img = Image.open(cStringIO.StringIO(imgdata))
+        try:
+            file = open(diskfilename, "rb+")
+            file.truncate()
+        except IOError:
+            file = open(diskfilename, "wb")
+        img.save(file, "JPEG")
     
     
     def exit(self):
