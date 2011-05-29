@@ -89,8 +89,10 @@ class MyMovie(object):
             di = os.path.split(os.path.dirname(Path))[1]
             print di
             year = re.search("\([0-9]*\)", di)
-            year = year.group(0).replace("(", "")
-            year = year.replace(")", "")
+            if year:
+                year = year.group(0).replace("(", "")
+                year = year.replace(")", "")
+            else: year = ""
             name = re.sub("\(.*\)", "", di).strip()
             name = re.sub("\[.*\]", "", name).strip()
             root = ET.Element("Title")
@@ -181,7 +183,7 @@ class MyMovie(object):
     @property
     def RunningTime(self):
         element = self.dom.find('RunningTime')
-        if element is not None:
+        if element is not None and element != "0.0":
             return element.text
         else:
             return ""
@@ -306,11 +308,11 @@ class MyMovie(object):
             type = ""
             role = ""
             if p.find('Name') is not None and p.find('Name').text:
-                name = str(p.find('Name').text)
+                name = p.find('Name').text
                 if p.find('Type') is not None:
                     type = str(p.find('Type').text)
                 if p.find('Role') is not None:
-                    type = str(p.find('Role').text)
+                    type = p.find('Role').text
                         
                 person = self.Person(name, type, role)
                 persons.append(person)
@@ -362,54 +364,9 @@ class MyMovie(object):
         self._HasXML = True
         
     def loadFromDictionary(self, mmdict, replaceonlymissing = False):
-        if (replaceonlymissing and not self.LocalTitle) or not replaceonlymissing:
-            self.LocalTitle = mmdict['LocalTitle']
-        
-        if (replaceonlymissing and not self.SortTitle) or not replaceonlymissing:
-            self.SortTitle = mmdict['SortTitle']
-        
-        if (replaceonlymissing and not self.OriginalTitle) or not replaceonlymissing:
-            self.OriginalTitle = mmdict['OriginalTitle']
-        
-        if (replaceonlymissing and not self.ProductionYear) or not replaceonlymissing:
-            self.ProductionYear = mmdict['ProductionYear']
-        
-        if (replaceonlymissing and not self.Added) or not replaceonlymissing:
-            self.Added = mmdict['Added']
-            
-        if (replaceonlymissing and not self.RunningTime) or not replaceonlymissing:
-            self.RunningTime = mmdict['RunningTime']
-            
-        if (replaceonlymissing and not self.IMDBrating) or (replaceonlymissing and self.IMDBrating == "0.0") or not replaceonlymissing:
-            self.IMDBrating = mmdict['IMDBrating']
-            
-        if (replaceonlymissing and not self.MPAARating) or not replaceonlymissing:
-            self.MPAARating = mmdict['MPAARating']
-            
-        if (replaceonlymissing and not self.Description) or not replaceonlymissing:
-            self.Description = mmdict['Description']
-            
-        if (replaceonlymissing and not self.Type) or not replaceonlymissing:
-            self.Type = mmdict['Type']
-        
-        if (replaceonlymissing and not self.AspectRatio) or not replaceonlymissing:
-            self.AspectRatio = mmdict['AspectRatio']
-        
-        if (replaceonlymissing and not self.IMDB) or not replaceonlymissing:
-            self.IMDB = mmdict['IMDB']
-        
-        if (replaceonlymissing and not self.TMDbId) or not replaceonlymissing:
-            self.TMDbId = mmdict['TMDbId']
-        
-        ### need to add special appending code for these 3 that checks existing entries
-        ### and adds them if they're not already on the list
-        
-        if (replaceonlymissing and not self.Genres) or not replaceonlymissing:
-            self.Genres = mmdict['Genres']
-        
-        if (replaceonlymissing and not self.Persons) or not replaceonlymissing:
-            self.Persons = mmdict['Persons']
-        
-        if (replaceonlymissing and not self.Studios) or not replaceonlymissing:
-            self.Studios = mmdict['Studios']
+        for item in mmdict:
+            attr = getattr(self, item)           
+            if not attr or not replaceonlymissing:
+                #print "LocalTitle" + mmdict["LocalTitle"]
+                setattr(self, item, mmdict[item])
     

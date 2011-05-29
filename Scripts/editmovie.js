@@ -4,17 +4,14 @@ $(document).ready(function() {
 	
 	 $('#movieposter, #moviebackdrop').bind('dblclick', function(event) {
 		var identifier = '';
-	 	if (IMDbID != ''){
-	 		midentifier = IMDbID
-	 	} else if (TMDbID != '') {
-	 		midentifier = TMDbID
-	 	} else if ($('#IMDB').val() != ''){
-	 		midentifier = $('#IMDB').val()
-	 	} else if ($('#TMDbId').val() != ''){
-	 		midentifier = $('#TMDbId').val()
+	 	if (IMDbID == '' && $('#IMDB').val() != ''){
+	 		IMDbID = $('#IMDB').val()
 	 	}
+	 	if (TMDbID == '' && $('#TMDbId').val() != '') {
+	 		TMDbID = $('#TMDbId').val()
+	 	} 
 	 	
-	 	if (midentifier == undefined){
+	 	if (TMDbID == '' && IMDbId == ''){
 	 		alert("You must have a TMDb or IMDb ID to fetch a poster")
 	 		return;
 	 	}
@@ -36,10 +33,10 @@ $(document).ready(function() {
 				   url: "/fetchimagelist/" + movieid,
 				   contentType: "application/x-www-form-urlencoded",
 				   dataType: 'json',
-				   data: 'imagetype=' + imgtype + '&identifier=' + midentifier,
+				   data: 'imagetype=' + imgtype + '&IMDB=' + IMDbID + '&TMDbId=' + TMDbID,
 				   success: function (data) {
 				       	//$('#imagepickerlist').html('')
-				       	$('.imagecarousel').html('cats')
+				       	$('.imagecarousel').html('')
 				       	$('.imagecarousel').append('<ul id="imagepickerlist"></ul>')
 				       	
 				       	$(data).each(function(i){
@@ -50,7 +47,6 @@ $(document).ready(function() {
 				       	$('#imagepickerlist').jcarousel({
 							buttonNextHTML: '<button style="float:right" class="next">&gt;&gt;</button>',
 							buttonPrevHTML: '<button style="float:left" class="prev">&lt;&lt;</button>',
-							size: data.length
 						})
 						
 						$('#imagepickerlist').selectable({
@@ -143,7 +139,7 @@ function fetchdialog()
 		               url: "/fetchmetadata/" + movieid,
 		               contentType: "application/x-www-form-urlencoded",
 		               dataType: 'xml',
-		               data: 'replaceonlymissing=' + checked + '&identifier=' + $('#fetchsearchresults li.ui-selected:first').attr("id"),
+		               data: 'replaceonlymissing=' + checked + '&' + $('#fetchsearchresults li.ui-selected:first').attr("id"),
 		               success: function (data) {
 		               		loadEditsFromXML(data)
 		               		$( '#fetchdialog' ).dialog( "close" );

@@ -4,21 +4,23 @@ import cherrypy, imp, time, cStringIO
 import lxml.etree as ET
 from cherrypy.lib.static import serve_file
 from PIL import Image
-import mymovies, sys, os, ConfigParser, urllib2, json, re
+import mymovies, sys, os, ConfigParser, urllib2, json, re, thread
 from operator import itemgetter
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
+#current_dir = os.path.dirname(os.path.abspath(__file__))
 class MainProgram:
     moviesdb = []
     unprocessedcount = 0
     config = None
-    def __init__(self):
+    def __init__(self): 
         cherrypy.config.update({'error_page.404': self.error_page_404})
         self.config = ConfigParser.ConfigParser()
 
         try:
+            self.config.optionxform = str
             cfgfile = open("main.conf")
             self.config.readfp(cfgfile)
+            
         except:
             self.config.add_section("general")
             self.config.set("general", "Directories", "")
@@ -47,11 +49,13 @@ class MainProgram:
                         searchkw = str(func.searchkw)
                         self.moviesearchers[searchkw] = func
         
-        self.refresh_movielist()
+        thread.start_new_thread(self.autoprocessnew, ()) 
+
 
         
         
-    def refresh_movielist(self):
+    def refresh_movielist(self): 
+        print "SUPERCAAAAAATS"
         self.unprocessedcount = 0
         self.moviesdb = []
         for dir in [d.strip() for d in self.config.get("general","Directories").split(",")]:
@@ -77,7 +81,7 @@ class MainProgram:
         ET.SubElement(root, 'listname').text = "Unprocessed Movies (%s)" % moviecount
         
         transform = ET.XSLT(ET.XML(open('Templates/index.xsl').read()))
-        editcontrols = (cherrypy.request.remote.ip == "192.168.1.100")
+        editcontrols = (cherrypy.request.remote.ip == cherrypy.config.get("server.socket_host"))
         doc = transform(root, EditControls="'%s'" % editcontrols)
         return str(doc)
     
@@ -103,7 +107,7 @@ class MainProgram:
         ET.SubElement(root, 'listname').text = "Movie List (%s)" % moviecount
         #indent(root)
         transform = ET.XSLT(ET.XML(open('Templates/index.xsl').read()))
-        editcontrols = (cherrypy.request.remote.ip == "192.168.1.100")
+        editcontrols = (cherrypy.request.remote.ip == cherrypy.config.get("server.socket_host"))
         doc = transform(root, EditControls="'%s'" % editcontrols)
         return str(doc)
     
@@ -251,7 +255,7 @@ class MainProgram:
             elif filename == "nfo":
                 files = os.listdir(dbmovie.Dir)
                 for fi in files:
-                    root,ext = os.path.splitext(fi)
+                    ext = os.path.splitext(fi)[1]
                     if ext.lower() == ".nfo":
                         return serve_file(os.path.join(dbmovie.Dir, fi), content_type='text/plain')
             
@@ -260,7 +264,7 @@ class MainProgram:
             ET.SubElement(movie.dom, 'unprocessed').text = str(self.unprocessedcount)
             ET.SubElement(movie.dom, 'movieID').text = dbmovie.ID
             transform = ET.XSLT(ET.XML(open('Templates/moviepage.xsl').read()))
-            editcontrols = (cherrypy.request.remote.ip == "192.168.1.100")
+            editcontrols = (cherrypy.request.remote.ip == cherrypy.config.get("server.socket_host"))
             doc = transform(movie.dom, EditControls="'%s'" % editcontrols)
     
             return str(doc)
@@ -283,24 +287,12 @@ class MainProgram:
         #Saves an edit page back to the mymovies.xml
         #the form is returned back as JSON with properties of every mymovies element.
         #TODO - Fix this remote IP
-        if cherrypy.request.remote.ip == "192.168.1.100":
+        if cherrypy.request.remote.ip == cherrypy.config.get("server.socket_host"):
             jsonBody = json.loads(cherrypy.request.body.read())
             for m in self.moviesdb:
                 if m.ID == movieID: dbmovie = m
-                               
-            mm = mymovies.MyMovie(os.path.join(dbmovie.Dir, "mymovies.xml"))
-            mm.loadFromDictionary(jsonBody)
-            mm.save() #disabled for testing purposes
-            
-            if not dbmovie.HasXML: self.unprocessedcount -= 1
-            dbmovie.LocalTitle = mm.LocalTitle
-            dbmovie.SortTitle = mm.SortTitle
-            dbmovie.ProductionYear = mm.ProductionYear
-            dbmovie.HasXML = True
-            dbmovie.Genres = mm.Genres
-            dbmovie.XMLComplete = mm.XMLComplete
-            self.moviesdb.sort(key=itemgetter("SortTitle"))
-                    
+            self.saveXML(jsonBody, dbmovie)
+
         else:
             cherrypy.response.status = 403
             return "You are not authorized to edit metadata"
@@ -311,13 +303,27 @@ class MainProgram:
         pass
     saveMovieXML.exposed = True
     
+    def saveXML(self, mymovieDICT, dbmovie):
+            mm = mymovies.MyMovie(os.path.join(dbmovie.Dir, "mymovies.xml"))
+            mm.loadFromDictionary(mymovieDICT)
+            mm.save() #disabled for testing purposes
+            
+            if not dbmovie.HasXML: self.unprocessedcount -= 1
+            dbmovie.LocalTitle = mm.LocalTitle
+            dbmovie.SortTitle = mm.SortTitle
+            dbmovie.ProductionYear = mm.ProductionYear
+            dbmovie.HasXML = True
+            dbmovie.Genres = mm.Genres
+            dbmovie.XMLComplete = mm.XMLComplete
+            self.moviesdb.sort(key=itemgetter("SortTitle")) 
+    
     def getMovieXML(self, movieID):
         #Returns pure XML copies of the requested xml element
         #Can return the full children of an XML element
         for m in self.moviesdb:
             if m.ID == movieID: dbmovie = m
 
-        if cherrypy.request.remote.ip == "192.168.1.100":
+        if cherrypy.request.remote.ip == cherrypy.config.get("server.socket_host"):
             try: 
                 open(os.path.join(dbmovie.Dir, "mymovies.xml"))
                 return serve_file(os.path.join(dbmovie.Dir, "mymovies.xml"), content_type='text/xml')
@@ -331,46 +337,22 @@ class MainProgram:
             return "You are not authorized to edit metadata"
     getMovieXML.exposed = True
     
-    def fetchmediasearch(self, movieid, identifier):
-        results = self.moviesearchers['tmdbtitle'](identifier)
+    def fetchmediasearch(self, movieid, identifier, searcher='imdbtitle'):
+        for f in self.config.get("moviefetchers", "searcher").split(","):
+            results = self.moviesearchers[f](identifier)
+            if results: break
+        #results = self.moviesearchers[str(searcher)](identifier)
         response = cherrypy.response
         response.headers['Content-Type'] = 'application/json'
         return json.JSONEncoder().encode(results)
     fetchmediasearch.exposed = True
     
-    def fetchmetadata(self, movieid, identifier, replaceonlymissing=True, fetchimages=True):
+    def fetchmetadata(self, movieid, replaceonlymissing=True, fetchimages=True, **identifier):
         for m in self.moviesdb:
             if m.ID == movieid: dbmovie = m
-        
         if replaceonlymissing == "true": replaceonlymissing = True
         else: replaceonlymissing = False
-        
-        fetcher = self.fetchers['tmdb'](identifier)
-        
-        mmdata = {"LocalTitle" : fetcher.LocalTitle,
-                  "OriginalTitle" : fetcher.OriginalTitle,
-                  "SortTitle" : fetcher.SortTitle,
-                  "ProductionYear" : fetcher.ProductionYear,
-                  "RunningTime" : fetcher.RunningTime,
-                  "IMDBrating" : fetcher.IMDBrating,
-                  "MPAARating" : fetcher.MPAARating,
-                  "AspectRatio" : fetcher.AspectRatio,
-                  "Genres" : fetcher.Genres,
-                  "Studios" : fetcher.Studios,
-                  "Persons" : fetcher.Persons,
-                  "Description" : fetcher.Description,
-                  "Added" :  str(time.strftime("%m/%d/%Y %I:%M:%S %p", time.localtime())),
-                  "Type" : "",
-                  "IMDB" : fetcher.IMDB,
-                  "TMDbId" : fetcher.TMDbId
-                  }
-        
-        if fetchimages and not dbmovie.HasPoster:
-            self.downloadimage(fetcher.posterimages[0]['full'], os.path.join(dbmovie.Dir, "folder.jpg"))
-            dbmovie.HasPoster = True
-        if fetchimages and not dbmovie.HasBackdrop:
-            self.downloadimage(fetcher.backdropimages[0]['full'], os.path.join(dbmovie.Dir, "backdrop.jpg"))
-            dbmovie.HasBackdrop = True         
+        mmdata = self.metadatafetcher(dbmovie, identifier, replaceonlymissing, fetchimages)
             
         mm = mymovies.MyMovie(os.path.join(dbmovie.Dir, "mymovies.xml"))
         mm.loadFromDictionary(mmdata, replaceonlymissing)
@@ -381,8 +363,38 @@ class MainProgram:
     
     fetchmetadata.exposed = True
     
-    def fetchimagelist(self, movieid, imagetype, identifier):
-        fetcher = self.fetchers['tmdb'](identifier)
+    def metadatafetcher(self, dbmovie, identifier, fetchimages=True):
+
+
+        
+        fetcher = {}
+        for f in self.fetchers:
+            if [id for id in identifier if id in self.fetchers[str(f)].identifiers]:
+                fi = self.fetchers[str(f)](identifier)
+                if fi.HasData:
+                    fetcher[f] = fi 
+
+        mmdata = {}
+        for item,value in self.config.items("moviefetchers"):
+            for f in value.split(','):
+                if f in fetcher and hasattr(fetcher[f], item) and (item not in mmdata or mmdata[item] == ""):
+                    prop = getattr(fetcher[f], item)
+                    mmdata[item] = prop
+        
+        if mmdata: mmdata['Added'] = str(time.strftime("%m/%d/%Y %I:%M:%S %p", time.localtime()))
+        #mmdata['Type'] = ""
+        if 'tmdb' in fetcher: #REMOVE THIS HACK LATER
+            if fetchimages and not dbmovie.HasPoster:
+                self.downloadimage(fetcher['tmdb'].posterimages[0]['full'], os.path.join(dbmovie.Dir, "folder.jpg"))
+                dbmovie.HasPoster = True
+            if fetchimages and not dbmovie.HasBackdrop:
+                self.downloadimage(fetcher['tmdb'].backdropimages[0]['full'], os.path.join(dbmovie.Dir, "backdrop.jpg"))
+                dbmovie.HasBackdrop = True 
+                
+        return mmdata    
+    
+    def fetchimagelist(self, movieid, imagetype, **kwargs):
+        fetcher = self.fetchers['tmdb'](kwargs['TMDbId'])
         results = []
         if imagetype=="poster":  
             results = fetcher.posterimages
@@ -444,18 +456,28 @@ class MainProgram:
         sys.exit(0)
     exit.exposed = True
     
-def indent(elem, level=0):
-    i = "\n" + level*"  "
-    if len(elem):
-        if not elem.text or not elem.text.strip():
-            elem.text = i + "  "
-        for elem in elem:
-            indent(elem, level+1)
-        if not elem.tail or not elem.tail.strip():
-            elem.tail = i
-    else:
-        if level and (not elem.tail or not elem.tail.strip()):
-            elem.tail = i
+    
+    def autoprocessnew(self):
+        self.refresh_movielist()
+        try:
+            while True:
+                print "CATS" 
+                self.refresh_movielist()
+                if self.unprocessedcount > 0:
+                    for m in self.moviesdb:
+                        if m.HasXML == False:
+                            title = (m.LocalTitle + " " + m.ProductionYear).strip()
+                            response = json.loads(self.fetchmediasearch(m.ID, title))
+                            if len(response) == 1: #given only one result, it's very likely it's the one the user wants
+                                did = {}
+                                for name,val in [id.split("=") for id in response[0]['id'].split("&")]:
+                                    #name, val = x.split('=')
+                                    did[name] = val
+                                result = self.metadatafetcher(m, did, True)
+                                self.saveXML(result, m) 
+                time.sleep(60)
+        except Exception as inst:
+            print inst
         
 def google_url(searchterm, regexstring):
     #uses google to get a URL matching the regex string

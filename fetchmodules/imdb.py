@@ -3,6 +3,7 @@ from BeautifulSoup import BeautifulSoup
 import tools
 
 def searchByTitle(title):
+        print "IMDB SEARCH HAPPENED"
         #uses google instead of IMDB search because it's better and easier to parse
         url = ('http://ajax.googleapis.com/ajax/services/search/web?v=1.0&q=' + urllib2.quote("site:imdb.com/title " + title))
         request = urllib2.Request(url, None, {'Referer': 'http://irc.00id.net'})
@@ -16,9 +17,8 @@ def searchByTitle(title):
             if not re.search("TV [a-zA-Z]",result['titleNoFormatting']) and re.search("imdb.com/title/tt\\d{7}/$",result['url']):
                 title = tools.decode_htmlentities(p.sub('',result['titleNoFormatting'].replace(" - IMDb", "")))
                 content = tools.decode_htmlentities(p.sub('',result['content']))
-                print result['content']
                 imdbid = re.search("tt\\d{7}", result['url']).group(0)
-                movieResults.append({"name":title, "desc":content, "id":imdbid})
+                movieResults.append({"name":title, "desc":content, "id":"IMDB=" + imdbid})
                 
         return movieResults
                    
@@ -30,18 +30,23 @@ class fetcher(object):
     datasource = "imdb"
     mediatype = "movie"
     imdbpage = None
-    mainidentifier = "IMDB"
+    identifiers = ["IMDB"]
+    HasData = False
     
     _identifier = ""
-    def __init__ (self, identifier):
-        self._identifier = identifier
-        imdburl = ('http://www.imdb.com/title/' + identifier + '/')
-        opener = urllib2.build_opener()
-        opener.addheaders = [('User-Agent',"Opera/9.10 (YourMom 8.0)"),
-                             ('Range', "bytes=0-40960")]
-        pagetmp = opener.open(imdburl)
-        self.imdbpage = BeautifulSoup(pagetmp.read())
-        opener.close()
+    def __init__ (self, identifier):       
+        try:
+            self._identifier = identifier['IMDB']
+            imdburl = ('http://www.imdb.com/title/' + identifier['IMDB'] + '/')
+            opener = urllib2.build_opener()
+            opener.addheaders = [('User-Agent',"Opera/9.10 (YourMom 8.0)"),
+                                 ('Range', "bytes=0-40960")]
+            pagetmp = opener.open(imdburl)
+            self.imdbpage = BeautifulSoup(pagetmp.read())
+            opener.close()
+            self.HasData = True
+        except:
+            self.HasData = False
         
     @property
     def LocalTitle(self):
@@ -149,10 +154,6 @@ class fetcher(object):
         return self._identifier
     
     @property
-    def TMDbId(self):
-        return None
-    
-    @property
     def Description(self):
         page = self.imdbpage.find(id="overview-top")
         if len(page.findAll('p')) == 2:
@@ -170,10 +171,6 @@ class fetcher(object):
     @property
     def posterimages(self):
         return self.imageURLs("poster")
-    
-    @property
-    def backdropimages(self):
-        return None
     
     def imageURLs(self, imgtype = "poster"): #IMDB returns *One poster image* - no backdrops, nothing else
         if imgtype == "poster" and self.imdbpage.find("img", attrs={'alt' : re.compile("Poster$")}):
