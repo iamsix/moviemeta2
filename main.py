@@ -394,7 +394,7 @@ class MainProgram:
         return mmdata    
     
     def fetchimagelist(self, movieid, imagetype, **kwargs):
-        fetcher = self.fetchers['tmdb'](kwargs['TMDbId'])
+        fetcher = self.fetchers['tmdb'](kwargs)
         results = []
         if imagetype=="poster":  
             results = fetcher.posterimages
@@ -466,15 +466,18 @@ class MainProgram:
                 if self.unprocessedcount > 0:
                     for m in self.moviesdb:
                         if m.HasXML == False:
-                            title = (m.LocalTitle + " " + m.ProductionYear).strip()
-                            response = json.loads(self.fetchmediasearch(m.ID, title))
-                            if len(response) == 1: #given only one result, it's very likely it's the one the user wants
-                                did = {}
-                                for name,val in [id.split("=") for id in response[0]['id'].split("&")]:
-                                    #name, val = x.split('=')
-                                    did[name] = val
-                                result = self.metadatafetcher(m, did, True)
-                                self.saveXML(result, m) 
+                            try:
+                                title = (m.LocalTitle + " " + m.ProductionYear).strip()
+                                response = json.loads(self.fetchmediasearch(m.ID, title))
+                                if len(response) == 1: #given only one result, it's very likely it's the one the user wants
+                                    did = {}
+                                    for name,val in [id.split("=") for id in response[0]['id'].split("&")]:
+                                        #name, val = x.split('=')
+                                        did[name] = val
+                                    result = self.metadatafetcher(m, did, True)
+                                    self.saveXML(result, m)
+                            except Exception as inst:
+                                print inst
                 time.sleep(60)
         except Exception as inst:
             print inst

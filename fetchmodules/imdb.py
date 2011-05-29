@@ -132,7 +132,7 @@ class fetcher(object):
             directors = self.imdbpage.find(text=re.compile("Directors?:")).parent.parent
             directors = directors.findAll("a")
             for person in directors:
-                if person.text.find('more credits') == -1:
+                if person.text.find('more credit') == -1:
                     personlist.append({"Name" : person.text, "Type" : "Director", "Role" : ""})
             
         if self.imdbpage.find("table", "cast_list"):

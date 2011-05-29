@@ -1,24 +1,28 @@
 import json, urllib2, time
 
 def searchByTitle(title):
-    apikey = open("tmdbapikey").read()
-    url = 'http://api.themoviedb.org/2.1/Movie.search/en/json/%s/%s' % (apikey, urllib2.quote(title))
-    opener = urllib2.build_opener()
-    opener.addheaders = [('User-Agent',"Opera/9.10 (YourMom 8.0)"),
-                         ('Range', "bytes=0-40960")]
-    pagetmp = opener.open(url).read()
-    tmdbjson = json.loads(pagetmp)
-    opener.close()
-    movieResults = []
-    for movie in tmdbjson:
-        if movie == "Nothing found.": break      
-        year = time.strftime("%Y", time.strptime(movie['released'], "%Y-%m-%d"))
-        name = movie['name'] + " (%s)" % year
-        desc = movie['overview']
-        id = "TMDbId=" + str(movie['id']) + "&IMDB=" + movie['imdb_id']
-        movieResults.append({"name": name, "desc": desc, "id": id})
-    return movieResults
-        
+    try:
+        apikey = open("tmdbapikey").read()
+        url = 'http://api.themoviedb.org/2.1/Movie.search/en/json/%s/%s' % (apikey, urllib2.quote(title))
+        opener = urllib2.build_opener()
+        opener.addheaders = [('User-Agent',"Opera/9.10 (YourMom 8.0)"),
+                             ('Range', "bytes=0-40960")]
+        pagetmp = opener.open(url).read()
+        tmdbjson = json.loads(pagetmp)
+        opener.close()
+        movieResults = []
+        for movie in tmdbjson:
+            if movie == "Nothing found.": break
+            if 'released' in movie:   
+                year = time.strftime("%Y", time.strptime(movie['released'], "%Y-%m-%d"))
+            else: year = ""
+            name = movie['name'] + " (%s)" % year
+            desc = movie['overview']
+            id = "TMDbId=" + str(movie['id']) + "&IMDB=" + movie['imdb_id']
+            movieResults.append({"name": name, "desc": desc, "id": id})
+        return movieResults
+    except Exception as inst:
+        print inst
 
 searchByTitle.searchkw = "tmdbtitle" 
 searchByTitle.desc = "Search themoviedb.org by movie title"
