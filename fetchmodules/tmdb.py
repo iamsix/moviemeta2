@@ -36,7 +36,7 @@ class fetcher(object):
     
     _identifier = ""
     def __init__ (self, identifier):
-        print identifier
+        #print identifier
         self._identifier = identifier
         apikey = open("tmdbapikey").read()
         
@@ -51,7 +51,9 @@ class fetcher(object):
                              ('Range', "bytes=0-40960")]
         pagetmp = opener.open(url).read()
         self.tmdbjson = json.loads(pagetmp)
+        
         self.tmdbjson = self.tmdbjson[0]
+
         opener.close()
         if self.tmdbjson == "Nothing found.":
             self.HasData = False

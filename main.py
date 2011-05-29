@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-import cherrypy, imp, time, cStringIO
+import cherrypy, imp, time, cStringIO, traceback
 import lxml.etree as ET
 from cherrypy.lib.static import serve_file
 from PIL import Image
@@ -273,11 +273,11 @@ class MainProgram:
 
     movie.exposed = True
     
-    def error_page_404(self, status, message, traceback, version):
+    def error_page_404(self, status, message, tr, version):
         if message.find("ImagesByName") != -1:
             return serve_file(os.path.join(os.getcwd(), "Images", "noactorpic.png"), content_type='image/png')
         else:
-            return "%s\n%s\n%s\n" % (status, message, traceback)
+            return "%s\n%s\n%s\n" % (status, message, tr)
     
     def index(self): 
         return self.unprocessed_movies()
@@ -352,7 +352,7 @@ class MainProgram:
             if m.ID == movieid: dbmovie = m
         if replaceonlymissing == "true": replaceonlymissing = True
         else: replaceonlymissing = False
-        mmdata = self.metadatafetcher(dbmovie, identifier, replaceonlymissing, fetchimages)
+        mmdata = self.metadatafetcher(dbmovie, identifier, fetchimages)
             
         mm = mymovies.MyMovie(os.path.join(dbmovie.Dir, "mymovies.xml"))
         mm.loadFromDictionary(mmdata, replaceonlymissing)
@@ -364,9 +364,6 @@ class MainProgram:
     fetchmetadata.exposed = True
     
     def metadatafetcher(self, dbmovie, identifier, fetchimages=True):
-
-
-        
         fetcher = {}
         for f in self.fetchers:
             if [id for id in identifier if id in self.fetchers[str(f)].identifiers]:
@@ -384,10 +381,11 @@ class MainProgram:
         if mmdata: mmdata['Added'] = str(time.strftime("%m/%d/%Y %I:%M:%S %p", time.localtime()))
         #mmdata['Type'] = ""
         if 'tmdb' in fetcher: #REMOVE THIS HACK LATER
-            if fetchimages and not dbmovie.HasPoster:
+            if fetchimages and not dbmovie.HasPoster and fetcher['tmdb'].posterimages:
                 self.downloadimage(fetcher['tmdb'].posterimages[0]['full'], os.path.join(dbmovie.Dir, "folder.jpg"))
                 dbmovie.HasPoster = True
-            if fetchimages and not dbmovie.HasBackdrop:
+            if fetchimages and not dbmovie.HasBackdrop and fetcher['tmdb'].backdropimages:
+                
                 self.downloadimage(fetcher['tmdb'].backdropimages[0]['full'], os.path.join(dbmovie.Dir, "backdrop.jpg"))
                 dbmovie.HasBackdrop = True 
                 
@@ -465,22 +463,29 @@ class MainProgram:
                 self.refresh_movielist()
                 if self.unprocessedcount > 0:
                     for m in self.moviesdb:
-                        if m.HasXML == False:
+                        if m.HasXML == False and m.ID not in self.autoprocessnew.failedcheck:
                             try:
                                 title = (m.LocalTitle + " " + m.ProductionYear).strip()
                                 response = json.loads(self.fetchmediasearch(m.ID, title))
+                                #print response
                                 if len(response) == 1: #given only one result, it's very likely it's the one the user wants
                                     did = {}
                                     for name,val in [id.split("=") for id in response[0]['id'].split("&")]:
-                                        #name, val = x.split('=')
                                         did[name] = val
+                                    print did
                                     result = self.metadatafetcher(m, did, True)
+                                    print result
                                     self.saveXML(result, m)
+                                else:
+                                    self.autoprocessnew.failedcheck.append(m.ID)
                             except Exception as inst:
-                                print inst
-                time.sleep(60)
-        except Exception as inst:
-            print inst
+                                self.autoprocessnew.failedcheck.append(m.ID)
+                                print "innerautothing " + str(inst)
+                                traceback.print_exc()
+                time.sleep(120)
+        except Exception as inst: 
+            print "mainautothing " + str(inst)
+    autoprocessnew.failedcheck = [] 
         
 def google_url(searchterm, regexstring):
     #uses google to get a URL matching the regex string
