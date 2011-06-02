@@ -6,7 +6,14 @@ setup(
     options={
         'py2exe': 
         {
-            'includes': ['lxml.etree', 'lxml._elementpath', 'BeautifulSoup', 'tools'],
+            "bundle_files": 3,
+            'includes': ['lxml.etree', 'lxml._elementpath', 'BeautifulSoup', 'tools', 'fetchmodules.imdb'],
+            "excludes": ["pywin", "pywin.debugger", "pywin.debugger.dbgcon", "pywin.dialogs",
+                          "pywin.dialogs.list", "Tkconstants", "Tkinter", "tcl"],
+
+             "optimize": 2,
+             
         }
-    }
+    },
+    zipfile = 'lib/libs.zip',
 )

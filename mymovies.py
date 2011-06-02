@@ -1,4 +1,4 @@
-import os, lxml.etree as ET, re
+import os, lxml.etree as ET, re, tools
 
 def scandirectory(self, path):
     for di in os.listdir(path):
@@ -14,19 +14,19 @@ def scandirectory(self, path):
                 continue
             else:
                 for fi in files:
-                    if True in [fi.find("." + x.strip()) !=-1 for x in self.config.get("general", "FileExtensions").split(",")] or HasXML:
+                    if True in [fi.find("." + x.strip()) !=-1 for x in tools.config.get("general", "FileExtensions").split(",")] or HasXML:
                         mymovie = MyMovie(os.path.join(path, di, "mymovies.xml"))
                         Actors = [person.Name.strip().lower() for person in mymovie.Persons]
                         if not mymovie.HasXML:
                             self.unprocessedcount += 1
                         key = hex(hash(os.path.join(path, di)) & 0xffffffff)[2:10]
-                        movie = movies(key, mymovie.SortTitle, mymovie.LocalTitle, mymovie.ProductionYear, os.path.join(path, di), mymovie.HasXML, mymovie.XMLComplete, mymovie.Genres,Actors, mymovie.IMDBrating, mymovie.Added, HasPoster, HasBackdrop)
+                        tmovie = movie(key, mymovie.SortTitle, mymovie.LocalTitle, mymovie.ProductionYear, os.path.join(path, di), mymovie.HasXML, mymovie.XMLComplete, mymovie.Genres,Actors, mymovie.IMDBrating, mymovie.Added, HasPoster, HasBackdrop)
                           
-                        self.moviesdb.append(movie)  
+                        self.moviesdb.append(tmovie)  
                         break      
 
     
-class movies:
+class movie:
     def __init__(self, ID, SortTitle, LocalTitle, ProductionYear, Dir, HasXML, XMLComplete, Genres, Actors, IMDBRating, DateAdded, HasPoster, HasBackdrop):
         self.SortTitle = SortTitle
         self.LocalTitle = LocalTitle
@@ -183,7 +183,7 @@ class MyMovie(object):
     @property
     def RunningTime(self):
         element = self.dom.find('RunningTime')
-        if element is not None and element != "0.0":
+        if element is not None and element.text != "0":
             return element.text
         else:
             return ""
@@ -194,7 +194,7 @@ class MyMovie(object):
     @property
     def IMDBrating(self):
         element = self.dom.find('IMDBrating')
-        if element is not None:
+        if element is not None and element.text != "0.0":
             return element.text
         else:
             return ""

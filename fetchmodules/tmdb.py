@@ -18,7 +18,7 @@ def searchByTitle(title):
             else: year = ""
             name = movie['name'] + " (%s)" % year
             desc = movie['overview']
-            id = "TMDbId=" + str(movie['id']) + "&IMDB=" + movie['imdb_id']
+            id = "TMDbId=%s&IMDB=%s" % (str(movie['id']), movie['imdb_id'])
             movieResults.append({"name": name, "desc": desc, "id": id})
         return movieResults
     except Exception as inst:
@@ -111,7 +111,8 @@ class fetcher(object):
         if 'genres' in self.tmdbjson:
             for genre in self.tmdbjson['genres']:
                 genres.append(genre['name'])
-            return genres
+        print genres
+        return genres
     
     @property
     def Studios(self):
@@ -119,7 +120,7 @@ class fetcher(object):
         if 'studios' in self.tmdbjson:
             for studio in self.tmdbjson['studios']:
                 studios.append(studio['name'])
-            return studios
+        return studios
     
     @property
     def IMDB(self):

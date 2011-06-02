@@ -1,31 +1,116 @@
 #! /usr/bin/env python
 
-import cherrypy, imp, time, cStringIO, traceback
+import cherrypy, imp, time, cStringIO, traceback as trace, tools
 import lxml.etree as ET
 from cherrypy.lib.static import serve_file
 from PIL import Image
 import mymovies, sys, os, ConfigParser, urllib2, json, re, thread
 from operator import itemgetter
 
-#current_dir = os.path.dirname(os.path.abspath(__file__))
-class MainProgram:
+
+class Movie2(object):
     moviesdb = []
+    
+    def __init__(self):
+        print id
+        self.unprocessedcount = 0
+        self.moviesdb = []
+        
+        tools.config = ConfigParser.ConfigParser()
+        tools.config.optionxform = str
+        cfgfile = open("main.conf")
+        tools.config.readfp(cfgfile)
+        
+        for dir in [d.strip() for d in tools.config.get("general","Directories").split(",")]:
+            if dir: mymovies.scandirectory(self, dir)
+        self.moviesdb.sort(key=itemgetter("SortTitle"))
+        
+#    exposed = True
+#    def __call__(self, id):
+#        print id
+        
+    def cat(self, dbmovie):
+        print dbmovie.LocalTitle
+        print "CAT WAS CALLED"
+    cat.exposed = True
+    
+    def cat2(self):
+        print "CAT222 WAS CALLED"
+    cat2.exposed = True
+    
+    
+#        filenames = []
+#        for fn in os.listdir('./fetchmodules'):
+#            if fn.endswith('.py') and not fn.startswith('_'):
+#                filenames.append(os.path.join('./fetchmodules', fn.replace('.py')))
+#
+#        for filename in filenames:
+#            name = os.path.basename(filename)[:-3]
+#            try:
+#                module = imp.load_source(name, filename)
+#            except Exception as inst: 
+#                print "Error loading module " + name + " : " + str(inst)
+#            else:
+#                self.fetchers[module.fetcher.datasource] = module.fetcher
+#                for name, func in vars(module).iteritems():
+#                    if hasattr(func, 'searchkw'):
+#                        searchkw = str(func.searchkw)
+#                        self.moviesearchers[searchkw] = func
+                        
+    def index(self):
+        print "index"
+    index.exposed = True
+
+    def folder_jpg(self):
+        print "OMG"
+        
+    def _cp_dispatch(self, vpath):
+        print vpath
+        dbmovie = None
+        for m in self.moviesdb:
+                if m.ID == vpath[0]: dbmovie = m
+        if dbmovie:
+            vpath.pop(0)          
+            print "GOT HERE"
+            cherrypy.request.params['dbmovie'] = dbmovie
+            if vpath:
+                func = vpath.pop(0)
+            else:
+                func = ""
+            return getattr(self, func, None)
+    
+    def default(self, movieid, dbmovie=None):
+        movie = mymovies.MyMovie(os.path.join(dbmovie.Dir, "mymovies.xml"))
+        ET.SubElement(movie.dom, 'unprocessed').text = str(self.unprocessedcount)
+        ET.SubElement(movie.dom, 'movieID').text = dbmovie.ID
+        transform = ET.XSLT(ET.XML(open('Templates/moviepage.xsl').read()))
+        editcontrols = (cherrypy.request.remote.ip == cherrypy.config.get("server.socket_host"))
+        doc = transform(movie.dom, EditControls="'%s'" % editcontrols)
+        return str(doc)
+    
+    default.exposed = True
+
+#current_dir = os.path.dirname(os.path.abspath(__file__))
+class MainProgram(object):
+#    import fetchmodules.imdb
+    moviesdb = []
+    movie2 = Movie2()
     unprocessedcount = 0
-    config = None
+    #config = None
     def __init__(self): 
         cherrypy.config.update({'error_page.404': self.error_page_404})
-        self.config = ConfigParser.ConfigParser()
+        tools.config = ConfigParser.ConfigParser()
 
         try:
-            self.config.optionxform = str
+            tools.config.optionxform = str
             cfgfile = open("main.conf")
-            self.config.readfp(cfgfile)
+            tools.config.readfp(cfgfile)
             
         except:
-            self.config.add_section("general")
-            self.config.set("general", "Directories", "")
-            self.config.set("general", "FileExtensions", "avi,mkv,mp4,ts")
-            self.config.write(open("main.conf", "w"))
+            tools.config.add_section("general")
+            tools.config.set("general", "Directories", "")
+            tools.config.set("general", "FileExtensions", "avi,mkv,mp4,ts")
+            tools.config.write(open("main.conf", "w"))
         
         filenames = []
         for fn in os.listdir('./fetchmodules'):
@@ -51,14 +136,16 @@ class MainProgram:
         
         thread.start_new_thread(self.autoprocessnew, ()) 
 
-
+#    def default(self, cats):
+#        print cats
+#    default.exposed = True
         
         
     def refresh_movielist(self): 
         print "SUPERCAAAAAATS"
         self.unprocessedcount = 0
         self.moviesdb = []
-        for dir in [d.strip() for d in self.config.get("general","Directories").split(",")]:
+        for dir in [d.strip() for d in tools.config.get("general","Directories").split(",")]:
             if dir: mymovies.scandirectory(self, dir)
         self.moviesdb.sort(key=itemgetter("SortTitle"))
 #        for movie in self.moviesdb:
@@ -67,16 +154,11 @@ class MainProgram:
     
     def unprocessed_movies(self): 
         
-        root = ET.Element("movies")
-        
-        moviecount = 0
-        for movie in self.moviesdb:
-            if not movie.HasXML:
-                moviecount +=1
-                movietag = ET.SubElement(root, 'movie')
-                ET.SubElement(movietag, 'LocalTitle').text = movie.LocalTitle
-                ET.SubElement(movietag, 'ProductionYear').text = movie.ProductionYear
-                ET.SubElement(movietag, 'Link').text = movie.ID
+       
+        list = self.moviesearcher(False, "HasXML")
+        moviecount = len(list)
+        root = self.XMLifyMovieList(list)
+
         ET.SubElement(root, 'unprocessed').text = str(self.unprocessedcount)
         ET.SubElement(root, 'listname').text = "Unprocessed Movies (%s)" % moviecount
         
@@ -86,23 +168,8 @@ class MainProgram:
         return str(doc)
     
     def movie_list(self):
-        root = ET.Element("movies")
-        ET.SubElement(root, 'unprocessed').text = str(self.unprocessedcount)
-        
-        moviecount = 0
-        for movie in self.moviesdb:
-            moviecount +=1
-            movietag = ET.SubElement(root, 'movie')
-            if not movie.HasXML: 
-                ET.SubElement(movietag, 'XML').text = "none"
-            elif movie.XMLComplete: 
-                ET.SubElement(movietag, 'XML').text = "complete"
-            else: 
-                ET.SubElement(movietag, 'XML').text = "incomplete"
-            ET.SubElement(movietag, 'LocalTitle').text = movie.LocalTitle
-            ET.SubElement(movietag, 'ProductionYear').text = movie.ProductionYear
-            ET.SubElement(movietag, 'Link').text = movie.ID
-            ET.SubElement(movietag, 'Path').text = movie.Dir.decode("utf-8", "ignore")
+        moviecount = len(self.moviesdb)
+        root = self.XMLifyMovieList(self.moviesdb)
             
         ET.SubElement(root, 'listname').text = "Movie List (%s)" % moviecount
         #indent(root)
@@ -117,10 +184,9 @@ class MainProgram:
     
     def settings(self):
         root = ET.Element("Settings")
-        
-       
+
         x = 0
-        for dir in [d.strip() for d in self.config.get("general","Directories").split(",")]:
+        for dir in [d.strip() for d in tools.config.get("general","Directories").split(",")]:
             x += 1
             moviedir = ET.SubElement(root, 'MovieDir')
             ET.SubElement(moviedir, "Dir").text = dir
@@ -128,7 +194,7 @@ class MainProgram:
         
         ET.SubElement(root, 'moviedircount').text = str(x + 1)
         ET.SubElement(root, 'unprocessed').text = str(self.unprocessedcount)
-        ET.SubElement(root, 'fileExtensions').text = self.config.get("general","FileExtensions")
+        ET.SubElement(root, 'fileExtensions').text = tools.config.get("general","FileExtensions")
         #indent(root)
         output = '<?xml-stylesheet type="text/xsl" href="/Templates/settings.xsl"?>\n' + ET.tostring(root)
         response = cherrypy.response
@@ -137,64 +203,34 @@ class MainProgram:
     settings.exposed = True
 
     def savesettings(self, **kwargs):
-        self.config.set("general", "Directories", ",".join(kwargs["mdirectory"]))
-        self.config.write(open("main.conf", "w"))
+        tools.config.set("general", "Directories", ",".join(kwargs["mdirectory"]))
+        tools.config.write(open("main.conf", "w"))
     savesettings.exposed = True
        
     def Person(self, Name):
-        root = ET.Element("movies")
-        ET.SubElement(root, 'unprocessed').text = str(self.unprocessedcount)
-        moviecount = 0
-        for movie in self.moviesdb:
-            if Name.strip().lower() in movie.Actors:
-                moviecount += 1
-                movietag = ET.SubElement(root, 'movie')
-                if not movie.HasXML: 
-                    ET.SubElement(movietag, 'XML').text = "none"
-                elif movie.XMLComplete: 
-                    ET.SubElement(movietag, 'XML').text = "complete"
-                else: 
-                    ET.SubElement(movietag, 'XML').text = "incomplete"
-                ET.SubElement(movietag, 'LocalTitle').text = movie.LocalTitle
-                ET.SubElement(movietag, 'ProductionYear').text = movie.ProductionYear
-                ET.SubElement(movietag, 'Link').text = movie.ID
-                ET.SubElement(movietag, 'Path').text = movie.Dir.decode("utf-8", "ignore")
-        
+        list = self.moviesearcher(Name.strip().lower(), 'Actors')
+        moviecount = len(list)
+        root = self.XMLifyMovieList(list)
+                
         imdburl = google_url("site:imdb.com/name " + Name, "imdb.com/name/nm[0-9]*/")
         title = ET.SubElement(root, 'listname') #.text = 'Movies with %s (%s)' % (Name, moviecount)
         ET.SubElement(title, 'a', {"href" : imdburl}).text = 'Movies with %s (%s)' % (Name.decode('UTF-8'), moviecount)
-        output = '<?xml-stylesheet type="text/xsl" href="/Templates/index.xsl"?>\n' + ET.tostring(root)
-        response = cherrypy.response
-        response.headers['Content-Type'] = 'text/xml'
-        return output
+        
+        transform = ET.XSLT(ET.XML(open('Templates/index.xsl').read()))
+        editcontrols = (cherrypy.request.remote.ip == cherrypy.config.get("server.socket_host"))
+        doc = transform(root, EditControls="'%s'" % editcontrols)
+        return str(doc)
     Person.exposed = True
     
     def Genre(self, Genre):
-        root = ET.Element("movies")
-        ET.SubElement(root, 'unprocessed').text = str(self.unprocessedcount)
-        moviecount = 0
-        for movie in self.moviesdb:
-            if Genre.strip() in movie.Genres:
-                moviecount += 1
-                print "cats"
-                movietag = ET.SubElement(root, 'movie')
-                if not movie.HasXML: 
-                    ET.SubElement(movietag, 'XML').text = "none"
-                elif movie.XMLComplete: 
-                    ET.SubElement(movietag, 'XML').text = "complete"
-                else: 
-                    ET.SubElement(movietag, 'XML').text = "incomplete"
-                ET.SubElement(movietag, 'LocalTitle').text = movie.LocalTitle
-                ET.SubElement(movietag, 'ProductionYear').text = movie.ProductionYear
-                ET.SubElement(movietag, 'Link').text = movie.ID
-                ET.SubElement(movietag, 'Path').text = movie.Dir.decode("utf-8", "ignore")
-        
+        list = self.moviesearcher(Genre.strip(), 'Genres')
+        moviecount = len(list)
+        root = self.XMLifyMovieList(list)        
         ET.SubElement(root, 'listname').text = "%s Movies (%s)" % (Genre, moviecount)
-        #indent(root)
-        output = '<?xml-stylesheet type="text/xsl" href="/Templates/index.xsl"?>\n' + ET.tostring(root)
-        response = cherrypy.response
-        response.headers['Content-Type'] = 'text/xml'
-        return output
+        transform = ET.XSLT(ET.XML(open('Templates/index.xsl').read()))
+        editcontrols = (cherrypy.request.remote.ip == cherrypy.config.get("server.socket_host"))
+        doc = transform(root, EditControls="'%s'" % editcontrols)
+        return str(doc)
     Genre.exposed = True
         
     def validatedirectory(self, dir):
@@ -273,13 +309,49 @@ class MainProgram:
 
     movie.exposed = True
     
-    def error_page_404(self, status, message, tr, version):
+    def search(self, search):
+        pass
+    search.exposed = True
+    
+    def moviesearcher(self, searchterm, searchby):
+        movielist = []
+
+        for movie in self.moviesdb:
+            if hasattr(movie, searchby) and\
+                ((type(getattr(movie, searchby)) == list and\
+                  searchterm in getattr(movie, searchby)) or\
+                getattr(movie, searchby) == searchterm\
+                ):
+                movielist.append(movie)
+        return movielist
+    
+    def XMLifyMovieList(self, movielist):
+        root = ET.Element("movies")
+        ET.SubElement(root, 'unprocessed').text = str(self.unprocessedcount)
+        
+        for movie in movielist:
+            movietag = ET.SubElement(root, 'movie')
+            if not movie.HasXML: 
+                ET.SubElement(movietag, 'XML').text = "none"
+            elif movie.XMLComplete: 
+                ET.SubElement(movietag, 'XML').text = "complete"
+            else: 
+                ET.SubElement(movietag, 'XML').text = "incomplete"
+            ET.SubElement(movietag, 'LocalTitle').text = movie.LocalTitle
+            ET.SubElement(movietag, 'ProductionYear').text = movie.ProductionYear
+            ET.SubElement(movietag, 'Link').text = movie.ID
+            ET.SubElement(movietag, 'Path').text = movie.Dir.decode("utf-8", "ignore")
+            
+        return root
+    
+    def error_page_404(self, status, message, traceback, version):
         if message.find("ImagesByName") != -1:
             return serve_file(os.path.join(os.getcwd(), "Images", "noactorpic.png"), content_type='image/png')
         else:
-            return "%s\n%s\n%s\n" % (status, message, tr)
+            return "%s\n%s\n%s\n" % (status, message, traceback)
     
-    def index(self): 
+    def index(self, **args):
+        print args 
         return self.unprocessed_movies()
     index.exposed = True
     
@@ -338,7 +410,7 @@ class MainProgram:
     getMovieXML.exposed = True
     
     def fetchmediasearch(self, movieid, identifier, searcher='imdbtitle'):
-        for f in self.config.get("moviefetchers", "searcher").split(","):
+        for f in tools.config.get("moviefetchers", "searcher").split(","):
             results = self.moviesearchers[f](identifier)
             if results: break
         #results = self.moviesearchers[str(searcher)](identifier)
@@ -372,9 +444,9 @@ class MainProgram:
                     fetcher[f] = fi 
 
         mmdata = {}
-        for item,value in self.config.items("moviefetchers"):
+        for item,value in tools.config.items("moviefetchers"):
             for f in value.split(','):
-                if f in fetcher and hasattr(fetcher[f], item) and (item not in mmdata or mmdata[item] == ""):
+                if f in fetcher and hasattr(fetcher[f], item) and (item not in mmdata or not mmdata[item]):
                     prop = getattr(fetcher[f], item)
                     mmdata[item] = prop
         
@@ -391,8 +463,8 @@ class MainProgram:
                 
         return mmdata    
     
-    def fetchimagelist(self, movieid, imagetype, **kwargs):
-        fetcher = self.fetchers['tmdb'](kwargs)
+    def fetchimagelist(self, movieid, imagetype, **identifiers):
+        fetcher = self.fetchers['tmdb'](identifiers)
         results = []
         if imagetype=="poster":  
             results = fetcher.posterimages
@@ -481,7 +553,7 @@ class MainProgram:
                             except Exception as inst:
                                 self.autoprocessnew.failedcheck.append(m.ID)
                                 print "innerautothing " + str(inst)
-                                traceback.print_exc()
+                                trace.print_exc()
                 time.sleep(120)
         except Exception as inst: 
             print "mainautothing " + str(inst)

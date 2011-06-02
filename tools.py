@@ -1,6 +1,8 @@
 import re 
 from htmlentitydefs import name2codepoint as n2cp
 
+config = None
+
 def decode_htmlentities(string):
     #decodes things like &amp
     entity_re = re.compile("&(#?)(x?)(\w+);")
